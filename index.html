@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<!--
+  PESCAUY v4.0
+  python -m http.server 8089
+  PC:   http://localhost:8089/pescauy_new.html
+  Celu: http://TU_IP:8089/pescauy_new.html
+  Admin: admin / admin123  |  User: alvaro / 1234
+-->
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<title>PescaUY – Lugares de pesca en Uruguay</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+<style>
+:root{--v:#1D9E75;--vl:#E1F5EE;--vd:#085041;--am:#FAC775;--bg:#f5f5f0;--sf:#fff;--br:rgba(0,0,0,0.1);--tx:#1a1a18;--t2:#6b6b63;--t3:#9b9b93;--danger:#E24B4A;--warn:#BA7517;--r:10px;--rl:14px;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);}
+.app{max-width:430px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--sf);}
+.screen{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.screen.active{display:flex;}
+.topbar{background:var(--sf);padding:14px 16px 12px;border-bottom:1px solid var(--br);display:flex;align-items:center;gap:10px;flex-shrink:0;z-index:10;}
+.logo-mark{width:30px;height:30px;border-radius:9px;background:var(--v);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-mark svg{width:16px;height:16px;}
+.ttitle{font-size:16px;font-weight:600;color:var(--tx);flex:1;letter-spacing:-.3px;}
+.ttitle span{color:var(--v);}
+.avatar-btn{width:32px;height:32px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid var(--v);flex-shrink:0;overflow:hidden;}
+.avatar-btn img{width:100%;height:100%;object-fit:cover;}
+.back-btn{background:var(--bg);border:1px solid var(--br);border-radius:var(--r);padding:6px 12px;font-size:13px;color:var(--tx);cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-weight:500;}
+.back-btn svg{width:14px;height:14px;}
+.navbar{background:var(--sf);border-top:1px solid var(--br);display:flex;padding:8px 0 max(12px,env(safe-area-inset-bottom));flex-shrink:0;z-index:10;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:3px 0;}
+.nav-item svg{width:21px;height:21px;color:var(--t3);}
+.nav-item span{font-size:10px;color:var(--t3);font-weight:500;}
+.nav-item.active svg,.nav-item.active span{color:var(--v);}
+.map-wrap{flex:1;position:relative;overflow:hidden;}
+#map{width:100%;height:100%;z-index:1;}
+.filter-bar{position:absolute;top:0;left:0;right:0;z-index:400;padding:10px 12px 14px;display:flex;gap:7px;overflow-x:scroll;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;background:linear-gradient(to bottom,rgba(255,255,255,.97) 65%,transparent);touch-action:pan-x;}
+.filter-bar::-webkit-scrollbar{display:none;}
+.fpill{background:var(--sf);border:1.5px solid var(--br);border-radius:20px;padding:7px 14px;font-size:12px;color:var(--t2);cursor:pointer;white-space:nowrap;font-weight:500;flex-shrink:0;font-family:'DM Sans',sans-serif;user-select:none;}
+.fpill.on{background:var(--v);color:#fff;border-color:var(--v);}
+.weather-pill{position:absolute;bottom:10px;left:10px;z-index:400;background:var(--sf);border:1px solid var(--br);border-radius:20px;padding:7px 13px;font-size:12px;color:var(--tx);font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.1);}
+.fab{position:absolute;bottom:10px;right:10px;z-index:400;width:48px;height:48px;border-radius:50%;background:var(--v);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(29,158,117,.4);}
+.fab svg{width:22px;height:22px;}
+.admin-fab{position:absolute;bottom:68px;right:10px;z-index:400;width:40px;height:40px;border-radius:50%;background:#BA7517;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;}
+.admin-fab svg{width:18px;height:18px;}
+.bottom-sheet{background:var(--sf);border-top:1px solid var(--br);max-height:215px;overflow-y:auto;flex-shrink:0;}
+.spot-row{padding:11px 14px;border-bottom:1px solid var(--br);cursor:pointer;display:flex;align-items:center;gap:10px;}
+.spot-row:active{background:var(--bg);}
+.spot-icon-wrap{width:36px;height:36px;border-radius:9px;background:var(--vl);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;overflow:hidden;}
+.spot-info{flex:1;min-width:0;}
+.spot-name{font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.spot-meta{font-size:11px;color:var(--t2);margin-top:2px;display:flex;align-items:center;gap:5px;}
+.stars-inline{color:var(--am);font-size:11px;}
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--vl);color:var(--vd);border:1px solid rgba(29,158,117,.3);font-weight:500;flex-shrink:0;}
+.badge.priv{background:#FAEEDA;color:#633806;border-color:rgba(186,117,23,.3);}
+.badge.admin-b{background:#E6F1FB;color:#0C447C;border-color:rgba(55,138,221,.3);}
+.tags-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;}
+.tag{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;}
+.tag.fish{background:#E6F1FB;color:#0C447C;}
+.tag.bait{background:#EAF3DE;color:#27500A;}
+.tag.neutral{background:var(--bg);color:var(--t2);border:1px solid var(--br);}
+.no-results{padding:24px 16px;text-align:center;color:var(--t2);font-size:13px;}
+/* DETAIL */
+.detail-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.det-body{padding:16px;}
+.det-title{font-size:19px;font-weight:600;color:var(--tx);letter-spacing:-.3px;margin-bottom:3px;}
+.det-loc{font-size:13px;color:var(--t2);margin-bottom:12px;display:flex;align-items:center;gap:5px;}
+.sec-label{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;margin-top:14px;}
+.stars-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;}
+.star-lg{font-size:18px;color:var(--am);}
+.star-lg.e{color:#ddd;}
+.user-rate-row{display:flex;gap:8px;margin-bottom:14px;}
+.usr-star{font-size:26px;color:#ddd;cursor:pointer;}
+.usr-star.on{color:var(--am);}
+.info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px;}
+.info-box{background:var(--bg);border-radius:var(--r);padding:10px 12px;}
+.info-box-label{font-size:10px;color:var(--t3);font-weight:500;margin-bottom:3px;}
+.info-box-val{font-size:13px;font-weight:600;color:var(--tx);}
+.comment-card{background:var(--bg);border-radius:var(--r);padding:12px;font-size:13px;color:var(--tx);line-height:1.65;margin-bottom:14px;border-left:3px solid var(--v);}
+.action-row{display:flex;gap:8px;margin-bottom:14px;}
+.act-btn{flex:1;background:var(--v);color:#fff;border:none;border-radius:var(--r);padding:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.act-btn.outline{background:transparent;color:var(--v);border:1.5px solid var(--v);}
+.act-btn.danger{background:var(--danger);}
+/* PHOTO GRID */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-bottom:14px;}
+.photo-grid-item{aspect-ratio:1;overflow:hidden;cursor:pointer;position:relative;background:#eee;}
+.photo-grid-item img,.photo-grid-item video{width:100%;height:100%;object-fit:cover;}
+.vid-badge{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;}
+.photo-likes-badge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;display:flex;align-items:center;gap:3px;}
+/* PHOTO DETAIL OVERLAY */
+.photo-detail-overlay{position:absolute;inset:0;z-index:8500;background:#000;display:none;flex-direction:column;}
+.photo-detail-overlay.open{display:flex;}
+.pd-top{display:flex;align-items:center;gap:10px;padding:12px 14px;flex-shrink:0;}
+.pd-av{width:34px;height:34px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1.5px solid var(--v);}
+.pd-av img{width:100%;height:100%;object-fit:cover;}
+.pd-name{font-size:13px;font-weight:600;color:#fff;}
+.pd-time{font-size:11px;color:rgba(255,255,255,.6);}
+.pd-close{margin-left:auto;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);border:none;cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;}
+.pd-media{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.pd-media img,.pd-media video{max-width:100%;max-height:100%;object-fit:contain;}
+.pd-actions{background:#111;padding:10px 14px;flex-shrink:0;}
+.pd-action-row{display:flex;gap:16px;align-items:center;margin-bottom:8px;}
+.pd-like-btn{background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:14px;font-weight:600;color:#fff;padding:4px 0;font-family:'DM Sans',sans-serif;}
+.pd-like-btn.liked{color:var(--danger);}
+.pd-like-btn svg{width:22px;height:22px;}
+.pd-comment-btn{background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:14px;color:rgba(255,255,255,.8);font-family:'DM Sans',sans-serif;}
+.pd-comment-btn svg{width:20px;height:20px;}
+.pd-comments-list{max-height:110px;overflow-y:auto;margin-bottom:8px;}
+.pd-comment-item{display:flex;gap:8px;margin-bottom:7px;}
+.pd-comment-av{width:24px;height:24px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
+.pd-comment-av img{width:100%;height:100%;object-fit:cover;}
+.pd-comment-author{font-size:11px;font-weight:700;color:#fff;}
+.pd-comment-text{font-size:12px;color:rgba(255,255,255,.85);line-height:1.4;}
+.pd-comment-time{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;}
+.pd-input-row{display:flex;gap:8px;align-items:center;}
+.pd-input-row input{flex:1;padding:9px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);font-size:13px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;}
+.pd-input-row input::placeholder{color:rgba(255,255,255,.4);}
+.pd-send{width:34px;height:34px;border-radius:50%;background:var(--v);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.pd-send svg{width:15px;height:15px;}
+/* CAROUSEL */
+.carousel{position:relative;overflow:hidden;touch-action:pan-y;}
+.carousel-track{display:flex;height:100%;transition:transform .3s cubic-bezier(.4,0,.2,1);}
+.carousel-slide{flex-shrink:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.carousel-slide img,.carousel-slide video{width:100%;height:100%;object-fit:cover;}
+.carousel-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:10;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.5);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;line-height:1;}
+.carousel-btn.prev{left:8px;}
+.carousel-btn.next{right:8px;}
+.carousel-dots{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:10;}
+.carousel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);}
+.carousel-dot.on{background:#fff;}
+.carousel-counter{position:absolute;top:8px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;z-index:10;}
+/* WEATHER */
+.weather-wrap{flex:1;overflow-y:auto;padding:16px;}
+.w-hero{background:var(--vl);border-radius:var(--rl);padding:18px;margin-bottom:14px;}
+.w-main{display:flex;align-items:center;gap:14px;}
+.w-temp{font-size:36px;font-weight:600;color:var(--tx);line-height:1;}
+.w-desc{font-size:14px;color:var(--t2);margin-top:3px;}
+.w-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px;}
+.wstat{background:#fff;border-radius:var(--r);padding:9px;text-align:center;}
+.wstat-val{font-size:14px;font-weight:600;color:var(--tx);}
+.wstat-lbl{font-size:10px;color:var(--t2);margin-top:2px;}
+.pesca-score{border-radius:var(--rl);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;}
+.pesca-score.good{background:#E1F5EE;}.pesca-score.ok{background:#FAEEDA;}.pesca-score.bad{background:#FCEBEB;}
+.ps-icon{font-size:24px;}.ps-title{font-size:14px;font-weight:600;}
+.pesca-score.good .ps-title{color:var(--vd);}.pesca-score.ok .ps-title{color:var(--warn);}.pesca-score.bad .ps-title{color:var(--danger);}
+.tip-item{background:var(--bg);border-radius:var(--r);padding:11px 13px;margin-bottom:8px;font-size:13px;color:var(--tx);line-height:1.5;}
+.tip-item strong{color:var(--vd);}
+/* FEED - Instagram style */
+.feed-wrap{flex:1;overflow-y:auto;}
+.feed-card{border-bottom:6px solid var(--bg);}
+.feed-header{display:flex;align-items:center;gap:9px;padding:12px 14px 10px;}
+.feed-av{width:36px;height:36px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border:1.5px solid var(--v);}
+.feed-av img{width:100%;height:100%;object-fit:cover;}
+.feed-name{font-size:13px;font-weight:600;color:var(--tx);}
+.feed-time{font-size:11px;color:var(--t2);}
+.feed-loc{font-size:11px;color:var(--v);font-weight:500;cursor:pointer;}
+.feed-media{width:100%;position:relative;}
+.feed-media img{width:100%;display:block;max-height:400px;object-fit:cover;}
+.feed-media video{width:100%;display:block;background:#000;}
+.feed-actions-bar{padding:10px 14px 4px;display:flex;align-items:center;gap:14px;}
+.feed-action-btn{background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500;color:var(--tx);font-family:'DM Sans',sans-serif;padding:2px 0;}
+.feed-action-btn svg{width:22px;height:22px;}
+.feed-action-btn.liked{color:var(--danger);}
+.feed-action-btn.liked svg{fill:var(--danger);stroke:var(--danger);}
+.feed-likes-count{font-size:13px;font-weight:600;color:var(--tx);padding:0 14px 4px;}
+.feed-caption-row{padding:2px 14px 8px;font-size:13px;color:var(--tx);line-height:1.5;}
+.feed-caption-row strong{font-weight:600;}
+.feed-view-comments{padding:0 14px 6px;font-size:12px;color:var(--t2);cursor:pointer;}
+.feed-comments-section{padding:0 14px 4px;}
+.feed-comment-item{display:flex;gap:7px;margin-bottom:7px;}
+.feed-comment-av{width:26px;height:26px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
+.feed-comment-av img{width:100%;height:100%;object-fit:cover;}
+.feed-comment-text{font-size:13px;color:var(--tx);line-height:1.4;flex:1;}
+.feed-comment-text strong{font-weight:600;}
+.feed-comment-time{font-size:10px;color:var(--t3);margin-top:2px;}
+.feed-comment-input{display:flex;align-items:center;gap:8px;padding:8px 14px 12px;border-top:1px solid var(--br);}
+.feed-comment-input input{flex:1;padding:8px 12px;border-radius:20px;border:1.5px solid var(--br);background:var(--bg);font-size:13px;color:var(--tx);font-family:'DM Sans',sans-serif;outline:none;}
+.feed-comment-input input:focus{border-color:var(--v);}
+.feed-comment-send{width:32px;height:32px;border-radius:50%;background:var(--v);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.feed-comment-send svg{width:14px;height:14px;}
+/* FORM */
+.form-wrap{flex:1;overflow-y:auto;padding:14px 16px;}
+.form-group{margin-bottom:14px;}
+.form-label{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;display:block;}
+.form-input{width:100%;padding:11px 13px;border-radius:var(--r);border:1.5px solid var(--br);background:var(--sf);font-size:14px;color:var(--tx);font-family:'DM Sans',sans-serif;outline:none;}
+.form-input:focus{border-color:var(--v);}
+.photo-upload-area{width:100%;height:100px;border-radius:var(--rl);border:2px dashed var(--br);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:var(--bg);color:var(--t2);font-size:13px;font-weight:500;margin-bottom:14px;position:relative;overflow:hidden;}
+.photo-upload-area svg{width:24px;height:24px;}
+.photo-upload-area img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.photo-upload-area .overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600;}
+.chips-wrap{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{padding:6px 13px;border-radius:20px;font-size:12px;cursor:pointer;border:1.5px solid var(--br);background:var(--sf);color:var(--t2);font-weight:500;font-family:'DM Sans',sans-serif;}
+.chip.on{background:var(--vl);color:var(--vd);border-color:var(--v);}
+.star-rate{display:flex;gap:8px;}
+.rate-star{font-size:26px;color:#ddd;cursor:pointer;}
+.rate-star.on{color:var(--am);}
+.submit-btn{width:100%;background:var(--v);color:#fff;border:none;border-radius:var(--rl);padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:6px;}
+.location-picker-btn{width:100%;border:1.5px dashed var(--v);border-radius:var(--r);padding:12px;font-size:13px;font-weight:600;color:var(--v);background:var(--vl);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'DM Sans',sans-serif;}
+.location-set{font-size:11px;color:var(--vd);margin-top:5px;font-weight:500;text-align:center;}
+/* MAP PICKER */
+.map-picker-screen{position:absolute;inset:0;z-index:9999;display:none;flex-direction:column;}
+.map-picker-screen.open{display:flex;}
+#map-picker-leaflet{flex:1;}
+.map-picker-crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-70%);z-index:10000;pointer-events:none;font-size:36px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4));}
+.map-picker-bar{background:var(--sf);border-top:1px solid var(--br);padding:12px 16px;display:flex;gap:10px;flex-shrink:0;}
+.map-picker-bar button{flex:1;padding:12px;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;}
+.mpcancel{background:var(--bg);color:var(--tx);border:1px solid var(--br)!important;}
+.mpconfirm{background:var(--v);color:#fff;}
+.map-picker-info{background:rgba(255,255,255,.95);position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:10000;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:500;color:var(--tx);white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.15);}
+/* PROFILE */
+.profile-wrap{flex:1;overflow-y:auto;}
+.prof-hero{background:var(--sf);padding:22px 16px 18px;text-align:center;border-bottom:1px solid var(--br);}
+.prof-av-lg{width:74px;height:74px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;border:2.5px solid var(--v);overflow:hidden;cursor:pointer;position:relative;}
+.prof-av-lg img{width:100%;height:100%;object-fit:cover;}
+.prof-av-edit{position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--v);display:flex;align-items:center;justify-content:center;}
+.prof-av-edit svg{width:12px;height:12px;}
+.prof-name{font-size:18px;font-weight:700;color:var(--tx);}
+.prof-bio{font-size:13px;color:var(--t2);margin-top:4px;}
+.stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--br);}
+.stat-cell{padding:14px 8px;text-align:center;border-right:1px solid var(--br);}
+.stat-cell:last-child{border-right:none;}
+.stat-num{font-size:20px;font-weight:700;color:var(--tx);}
+.stat-lbl{font-size:10px;color:var(--t2);font-weight:500;margin-top:2px;}
+.menu-item{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--br);font-size:14px;color:var(--tx);cursor:pointer;gap:12px;}
+.menu-item svg{width:18px;height:18px;color:var(--t2);}
+.menu-item .chevron{margin-left:auto;color:var(--t3);}
+.menu-item.danger{color:var(--danger);}
+.menu-item.danger svg{color:var(--danger);}
+.badge-strip{display:flex;gap:8px;padding:14px 16px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--br);}
+.badge-strip::-webkit-scrollbar{display:none;}
+.achiev{background:var(--bg);border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:11px;font-weight:600;color:var(--tx);white-space:nowrap;}
+/* SUBSCREENS */
+.subscreen{flex:1;overflow-y:auto;padding:16px;}
+.rule-card{background:var(--bg);border-radius:var(--r);padding:14px;margin-bottom:10px;border-left:3px solid var(--v);}
+.rule-num{font-size:11px;font-weight:700;color:var(--v);margin-bottom:4px;}
+.rule-text{font-size:13px;color:var(--tx);line-height:1.6;}
+.notif-item{padding:13px 16px;border-bottom:1px solid var(--br);display:flex;gap:10px;}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--v);flex-shrink:0;margin-top:4px;}
+.notif-dot.read{background:var(--t3);}
+/* AUTH */
+.auth-container{flex:1;overflow-y:auto;padding:32px 20px 24px;display:flex;flex-direction:column;}
+.auth-brand{text-align:center;margin-bottom:28px;}
+.auth-logo{width:58px;height:58px;border-radius:16px;background:var(--v);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;}
+.auth-logo svg{width:30px;height:30px;}
+.auth-name{font-family:'DM Serif Display',serif;font-size:28px;color:var(--tx);letter-spacing:-.5px;}
+.auth-tagline{font-size:14px;color:var(--t2);margin-top:4px;}
+.auth-tabs{display:flex;background:var(--bg);border-radius:var(--rl);padding:4px;margin-bottom:20px;}
+.auth-tab{flex:1;padding:9px;border-radius:10px;text-align:center;font-size:14px;font-weight:600;cursor:pointer;color:var(--t2);}
+.auth-tab.on{background:var(--sf);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.auth-group{margin-bottom:14px;}
+.auth-label{font-size:12px;font-weight:600;color:var(--t2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;display:block;}
+.auth-input{width:100%;padding:13px 14px;border-radius:var(--rl);border:1.5px solid var(--br);background:var(--bg);font-size:15px;color:var(--tx);font-family:'DM Sans',sans-serif;outline:none;}
+.auth-input:focus{border-color:var(--v);background:#fff;}
+.auth-input.error{border-color:var(--danger);}
+.auth-error{font-size:12px;color:var(--danger);margin-top:5px;font-weight:500;display:none;}
+.auth-error.show{display:block;}
+.auth-btn{width:100%;background:var(--v);color:#fff;border:none;border-radius:var(--rl);padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.auth-footer{text-align:center;margin-top:18px;font-size:12px;color:var(--t3);}
+.auth-footer a{color:var(--v);font-weight:600;cursor:pointer;}
+/* ADMIN */
+.admin-section{background:#E6F1FB;border-radius:var(--r);padding:12px;margin-bottom:14px;border:1px solid rgba(55,138,221,.3);}
+.admin-section-title{font-size:11px;font-weight:700;color:#0C447C;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+/* TOAST */
+.toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:var(--tx);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:500;z-index:99999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.loading-screen{position:absolute;inset:0;z-index:99998;background:var(--sf);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.loading-screen .logo{width:64px;height:64px;border-radius:18px;background:var(--v);display:flex;align-items:center;justify-content:center;}
+.loading-screen .logo svg{width:34px;height:34px;}
+.loading-screen p{font-size:14px;color:var(--t2);font-weight:500;}
+/* IMG VIEWER */
+.img-viewer{position:absolute;inset:0;z-index:9000;background:rgba(0,0,0,.95);display:none;align-items:center;justify-content:center;}
+.img-viewer.open{display:flex;}
+.img-viewer img{max-width:100%;max-height:90vh;object-fit:contain;}
+.img-viewer-close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);border:none;cursor:pointer;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;}
+/* Leaflet */
+.custom-pin{width:34px;height:34px;border-radius:50%;background:var(--v);border:3px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.25);font-size:14px;}
+.custom-pin.priv{background:#BA7517;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+<div class="toast" id="toast"></div>
+
+<!-- IMG VIEWER -->
+<div class="img-viewer" id="img-viewer">
+  <button class="img-viewer-close" onclick="closeImgViewer()">✕</button>
+  <img id="img-viewer-img" src="" alt=""/>
+</div>
+
+<!-- PHOTO DETAIL (likes/comments per photo) -->
+<div class="photo-detail-overlay" id="pdo">
+  <div class="pd-top">
+    <div class="pd-av" id="pdo-av"></div>
+    <div><div class="pd-name" id="pdo-name"></div><div class="pd-time" id="pdo-time"></div></div>
+    <div id="pdo-counter" style="margin-left:auto;margin-right:8px;background:rgba(255,255,255,.15);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;"></div>
+    <button class="pd-close" onclick="closePDO()">✕</button>
+  </div>
+  <div class="pd-media" id="pdo-media" style="position:relative;">
+    <button onclick="pdoNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:10;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.5);border:none;cursor:pointer;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;">‹</button>
+    <button onclick="pdoNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:10;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.5);border:none;cursor:pointer;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;">›</button>
+  </div>
+  <div class="pd-actions">
+    <div class="pd-action-row">
+      <button class="pd-like-btn" id="pdo-like-btn" onclick="togglePhotoLike()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span id="pdo-lc">0</span>
+      </button>
+      <button class="pd-comment-btn" onclick="document.getElementById('pdo-inp').focus()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span id="pdo-cc">0</span> comentarios
+      </button>
+    </div>
+    <div class="pd-comments-list" id="pdo-comments"></div>
+    <div class="pd-input-row">
+      <input type="text" id="pdo-inp" placeholder="Comentá esta foto..." onkeydown="if(event.key==='Enter')sendPhotoComment()"/>
+      <button class="pd-send" onclick="sendPhotoComment()"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<!-- MAP PICKER -->
+<div class="map-picker-screen" id="map-picker-screen">
+  <div class="map-picker-info">📍 Mové el mapa hasta el punto exacto</div>
+  <div class="map-picker-crosshair">📍</div>
+  <div id="map-picker-leaflet"></div>
+  <div class="map-picker-bar">
+    <button class="mpcancel" onclick="closeMapPicker(false)">Cancelar</button>
+    <button class="mpconfirm" onclick="closeMapPicker(true)">Confirmar ubicación</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading-screen">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M3 18c3-4 6-6 9-6s6 2 9 6"/><circle cx="12" cy="7" r="3"/></svg></div>
+  <p>Cargando PescaUY...</p>
+</div>
+
+<!-- LOGIN -->
+<div class="screen" id="s-login">
+  <div class="auth-container">
+    <div class="auth-brand">
+      <div class="auth-logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M3 18c3-4 6-6 9-6s6 2 9 6"/><path d="M7 14c1.5-2 3-3 5-3"/><circle cx="12" cy="7" r="3"/></svg></div>
+      <div class="auth-name">PescaUY</div>
+      <div class="auth-tagline">La comunidad de pescadores de Uruguay</div>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab on" id="tab-login" onclick="switchTab('login')">Ingresar</div>
+      <div class="auth-tab" id="tab-register" onclick="switchTab('register')">Crear cuenta</div>
+    </div>
+    <div id="form-login">
+      <div class="auth-group"><label class="auth-label">Usuario o email</label><input class="auth-input" type="text" id="l-user" placeholder="usuario o email" onkeydown="if(event.key==='Enter')doLogin()"/><div class="auth-error" id="l-user-err">Ingresá tu usuario</div></div>
+      <div class="auth-group"><label class="auth-label">Contraseña</label><input class="auth-input" type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/><div class="auth-error" id="l-pass-err">Ingresá tu contraseña</div></div>
+      <div class="auth-error" id="l-general-err" style="margin-bottom:10px;text-align:center;">Usuario o contraseña incorrectos</div>
+      <button class="auth-btn" onclick="doLogin()">Ingresar</button>
+      <div class="auth-footer">¿No tenés cuenta? <a onclick="switchTab('register')">Registrate gratis</a></div>
+    </div>
+    <div id="form-register" style="display:none;">
+      <div class="auth-group"><label class="auth-label">Nombre completo</label><input class="auth-input" type="text" id="r-name" placeholder="Juan González"/><div class="auth-error" id="r-name-err">Ingresá tu nombre</div></div>
+      <div class="auth-group"><label class="auth-label">Usuario</label><input class="auth-input" type="text" id="r-user" placeholder="pescador123"/><div class="auth-error" id="r-user-err">Ingresá un usuario</div></div>
+      <div class="auth-group"><label class="auth-label">Email</label><input class="auth-input" type="email" id="r-email" placeholder="tu@email.com"/><div class="auth-error" id="r-email-err">Email inválido</div></div>
+      <div class="auth-group"><label class="auth-label">Contraseña</label><input class="auth-input" type="password" id="r-pass" placeholder="Mínimo 6 caracteres"/><div class="auth-error" id="r-pass-err">Mínimo 6 caracteres</div></div>
+      <button class="auth-btn" onclick="doRegister()">Crear cuenta</button>
+      <div class="auth-footer">¿Ya tenés cuenta? <a onclick="switchTab('login')">Ingresá acá</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAPA -->
+<div class="screen" id="s-map">
+  <div class="topbar">
+    <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M3 18c3-4 6-6 9-6s6 2 9 6"/><circle cx="12" cy="7" r="3"/></svg></div>
+    <div class="ttitle">Pesca<span>UY</span></div>
+    <div class="avatar-btn" id="top-avatar" onclick="go('profile')"></div>
+  </div>
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="filter-bar" id="filter-bar">
+      <div class="fpill on" onclick="setFilter(this,'all')">🗺 Todos</div>
+      <div class="fpill" onclick="setFilter(this,'dorado')">🐟 Dorado</div>
+      <div class="fpill" onclick="setFilter(this,'pejerrey')">🐠 Pejerrey</div>
+      <div class="fpill" onclick="setFilter(this,'corvina')">🐡 Corvina</div>
+      <div class="fpill" onclick="setFilter(this,'tararira')">🎣 Tararira</div>
+      <div class="fpill" onclick="setFilter(this,'surubi')">🦈 Surubí</div>
+      <div class="fpill" onclick="setFilter(this,'bagre')">🐟 Bagre</div>
+      <div class="fpill" onclick="setFilter(this,'lenguado')">🐠 Lenguado</div>
+    </div>
+    <div class="weather-pill" onclick="go('weather')"><span id="w-icon-sm">🌤</span><span id="w-text-sm">Cargando...</span></div>
+    <button class="fab" onclick="go('add')"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    <button class="admin-fab" id="admin-fab" onclick="go('admin')"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></button>
+  </div>
+  <div class="bottom-sheet" id="bottom-sheet"></div>
+  <nav class="navbar">
+    <div class="nav-item active" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="3,11 12,2 21,11"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>Mapa</span></div>
+    <div class="nav-item" onclick="go('feed')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><span>Feed</span></div>
+    <div class="nav-item" onclick="go('add')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Subir</span></div>
+    <div class="nav-item" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Perfil</span></div>
+  </nav>
+</div>
+
+<!-- DETALLE LUGAR -->
+<div class="screen" id="s-detail">
+  <div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button></div>
+  <div class="detail-scroll" id="det-content"></div>
+</div>
+
+<!-- CLIMA -->
+<div class="screen" id="s-weather">
+  <div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Clima para pescar</div></div>
+  <div class="weather-wrap" id="weather-content"><p style="color:var(--t2);font-size:13px;">Cargando...</p></div>
+</div>
+
+<!-- FEED -->
+<div class="screen" id="s-feed">
+  <div class="topbar">
+    <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M3 18c3-4 6-6 9-6s6 2 9 6"/><circle cx="12" cy="7" r="3"/></svg></div>
+    <div class="ttitle">Pesca<span>UY</span></div>
+    <div class="avatar-btn" id="feed-avatar" onclick="go('profile')"></div>
+  </div>
+  <div class="feed-wrap" id="feed-list"></div>
+  <nav class="navbar">
+    <div class="nav-item" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="3,11 12,2 21,11"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>Mapa</span></div>
+    <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><span>Feed</span></div>
+    <div class="nav-item" onclick="go('add')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Subir</span></div>
+    <div class="nav-item" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Perfil</span></div>
+  </nav>
+</div>
+
+<!-- SUBIR LUGAR -->
+<div class="screen" id="s-add">
+  <div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Agregar lugar</div></div>
+  <div class="form-wrap">
+    <label class="form-label">Fotos y videos del lugar (máx. 5 fotos + 2 videos)</label>
+    <div id="new-photos-preview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button type="button" onclick="document.getElementById('photo-input').click()" style="flex:1;padding:10px;border-radius:var(--r);border:1.5px dashed var(--v);background:var(--vl);color:var(--vd);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Agregar fotos</button>
+      <button type="button" onclick="document.getElementById('video-input').click()" style="flex:1;padding:10px;border-radius:var(--r);border:1.5px dashed var(--br);background:var(--bg);color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🎥 Agregar video</button>
+    </div>
+    <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="addNewSpotPhotos(this,'photo')"/>
+    <input type="file" id="video-input" accept="video/*" multiple style="display:none" onchange="addNewSpotPhotos(this,'video')"/>
+    <div class="form-group"><label class="form-label">Nombre del lugar</label><input class="form-input" type="text" id="add-name" placeholder="Ej: Barra Santa Lucía - Santiago Vázquez"/></div>
+    <div class="form-group"><label class="form-label">Departamento</label>
+      <select class="form-input" id="add-dept"><option value="">Seleccioná...</option><option>Artigas</option><option>Canelones</option><option>Cerro Largo</option><option>Colonia</option><option>Durazno</option><option>Flores</option><option>Florida</option><option>Lavalleja</option><option>Maldonado</option><option>Montevideo</option><option>Paysandú</option><option>Río Negro</option><option>Rivera</option><option>Rocha</option><option>San José</option><option>Soriano</option><option>Tacuarembó</option><option>Treinta y Tres</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ubicación exacta en el mapa</label>
+      <button class="location-picker-btn" onclick="openMapPicker()" id="loc-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Seleccionar punto en el mapa
+      </button>
+      <div class="location-set" id="loc-set" style="display:none;"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Tipo de pesca</label><div class="chips-wrap" id="chips-tipo"><div class="chip on" onclick="tChip(this)">Orilla</div><div class="chip" onclick="tChip(this)">Embarcado</div><div class="chip" onclick="tChip(this)">Mosca</div><div class="chip" onclick="tChip(this)">Spinning</div><div class="chip" onclick="tChip(this)">Costa/Mar</div></div></div>
+    <div class="form-group"><label class="form-label">Especies</label><div class="chips-wrap" id="chips-species"><div class="chip" onclick="tChip(this)">Dorado</div><div class="chip" onclick="tChip(this)">Boga</div><div class="chip" onclick="tChip(this)">Tararira</div><div class="chip" onclick="tChip(this)">Pejerrey</div><div class="chip" onclick="tChip(this)">Surubí</div><div class="chip" onclick="tChip(this)">Bagre</div><div class="chip" onclick="tChip(this)">Corvina</div><div class="chip" onclick="tChip(this)">Lenguado</div><div class="chip" onclick="tChip(this)">Brótola</div><div class="chip" onclick="tChip(this)">Pescadilla</div></div></div>
+    <div class="form-group"><label class="form-label">Carnada</label><div class="chips-wrap" id="chips-bait"><div class="chip" onclick="tChip(this)">Lombriz</div><div class="chip" onclick="tChip(this)">Pejerrey vivo</div><div class="chip" onclick="tChip(this)">Pan de maíz</div><div class="chip" onclick="tChip(this)">Señuelo</div><div class="chip" onclick="tChip(this)">Carne</div><div class="chip" onclick="tChip(this)">Mosca artificial</div><div class="chip" onclick="tChip(this)">Mejillón</div><div class="chip" onclick="tChip(this)">Calamar</div></div></div>
+    <div class="form-group"><label class="form-label">Tu calificación</label><div class="star-rate" id="add-stars"><span class="rate-star" onclick="setAddStar(1)">★</span><span class="rate-star" onclick="setAddStar(2)">★</span><span class="rate-star" onclick="setAddStar(3)">★</span><span class="rate-star" onclick="setAddStar(4)">★</span><span class="rate-star" onclick="setAddStar(5)">★</span></div></div>
+    <div class="form-group"><label class="form-label">Acceso</label><div class="chips-wrap" id="chips-access"><div class="chip on" onclick="tSingle(this)">Público</div><div class="chip" onclick="tSingle(this)">Privado</div><div class="chip" onclick="tSingle(this)">Con permiso</div></div></div>
+    <div class="form-group"><label class="form-label">Descripción</label><textarea class="form-input" id="add-comment" rows="3" placeholder="Contá qué tal está el lugar, mejor hora, condición del agua..."></textarea></div>
+    <button class="submit-btn" onclick="publishSpot()">Publicar lugar de pesca</button>
+    <div style="height:20px;"></div>
+  </div>
+</div>
+
+<!-- PERFIL -->
+<div class="screen" id="s-profile">
+  <div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Mi perfil</div></div>
+  <div class="profile-wrap">
+    <div class="prof-hero">
+      <div class="prof-av-lg" id="prof-av-lg" onclick="document.getElementById('prof-photo-input').click()">
+        <span id="prof-av-initials"></span>
+        <div class="prof-av-edit"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+      </div>
+      <input type="file" id="prof-photo-input" accept="image/*" style="display:none" onchange="updateProfilePhoto(this)"/>
+      <div class="prof-name" id="prof-name-display"></div>
+      <div class="prof-bio" id="prof-bio-display"></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-cell"><div class="stat-num" id="stat-lugares">0</div><div class="stat-lbl">Lugares</div></div>
+      <div class="stat-cell"><div class="stat-num" id="stat-fotos">0</div><div class="stat-lbl">Fotos</div></div>
+      <div class="stat-cell"><div class="stat-num">⭐4.7</div><div class="stat-lbl">Reputación</div></div>
+    </div>
+    <div class="badge-strip">
+      <div class="achiev">🎯 Primer lugar</div>
+      <div class="achiev">🏆 Activo</div>
+      <div class="achiev">🗺️ Explorador</div>
+      <div class="achiev">📸 Fotógrafo</div>
+    </div>
+    <div class="menu-item" onclick="go('favorites')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Mis lugares favoritos<span class="chevron">›</span></div>
+    <div class="menu-item" onclick="go('notif')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notificaciones<span class="chevron">›</span></div>
+    <div class="menu-item" onclick="go('reglamento')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Reglamento de pesca UY<span class="chevron">›</span></div>
+    <div class="menu-item" onclick="go('reglas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Reglas de la comunidad<span class="chevron">›</span></div>
+    <div class="menu-item" onclick="go('soporte')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
+      Soporte y denuncias<span class="chevron">›</span>
+    </div>
+    <div class="menu-item danger" onclick="doLogout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Cerrar sesión<span class="chevron">›</span></div>
+  </div>
+  <nav class="navbar">
+    <div class="nav-item" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="3,11 12,2 21,11"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>Mapa</span></div>
+    <div class="nav-item" onclick="go('feed')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><span>Feed</span></div>
+    <div class="nav-item" onclick="go('add')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Subir</span></div>
+    <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Perfil</span></div>
+  </nav>
+</div>
+<!-- FAVORITOS -->
+<div class="screen" id="s-favorites"><div class="topbar"><button class="back-btn" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Mis favoritos</div></div><div class="subscreen" id="favorites-list" style="padding:0;"></div></div>
+<!-- NOTIFICACIONES -->
+<div class="screen" id="s-notif"><div class="topbar"><button class="back-btn" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Notificaciones</div></div><div class="subscreen" style="padding:0;" id="notif-list"></div></div>
+<!-- REGLAMENTO -->
+<div class="screen" id="s-reglamento"><div class="topbar"><button class="back-btn" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Reglamento de pesca</div></div>
+<div class="subscreen"><div style="background:var(--vl);border-radius:var(--r);padding:12px;margin-bottom:14px;font-size:12px;color:var(--vd);font-weight:500;">Fuente: MGAP – Uruguay</div>
+<div class="rule-card"><div class="rule-num">TALLAS MÍNIMAS</div><div class="rule-text">• Dorado: 45 cm • Surubí: 70 cm • Boga: 30 cm • Tararira: 30 cm • Pejerrey: 20 cm • Corvina: 30 cm</div></div>
+<div class="rule-card"><div class="rule-num">VEDAS</div><div class="rule-text">• Dorado: 1° oct al 30 nov • Surubí: 1° set al 31 oct. Las fechas pueden variar, consultá el MGAP.</div></div>
+<div class="rule-card"><div class="rule-num">LÍMITE DE CAPTURA</div><div class="rule-text">• Pesca deportiva: máximo 5 piezas por especie por día • Pesca comercial y con red requieren habilitación.</div></div>
+<div class="rule-card"><div class="rule-num">LICENCIA</div><div class="rule-text">• Requerida para mayores de 18 años • mgap.gub.uy • Menores de 18: libre acompañado de adulto habilitado.</div></div>
+<div style="height:16px;"></div></div></div>
+<!-- SOPORTE -->
+<div class="screen" id="s-soporte">
+  <div class="topbar"><button class="back-btn" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Soporte y denuncias</div></div>
+  <div class="subscreen">
+    <div style="background:var(--vl);border-radius:var(--rl);padding:16px;margin-bottom:16px;text-align:center;"><div style="font-size:36px;margin-bottom:8px;">🎣</div><div style="font-size:15px;font-weight:600;color:var(--vd);">Equipo PescaUY</div><div style="font-size:13px;color:var(--t2);margin-top:4px;">Estamos para ayudarte</div></div>
+    <div class="rule-card" style="border-left-color:var(--v);"><div class="rule-num">📧 CONTACTO</div><div class="rule-text">Para consultas, problemas técnicos o denuncias escribinos a:<br/><br/><strong style="color:var(--v);font-size:14px;">soporte@pescauy.com.uy</strong><br/><br/>Próximamente habilitaremos el contacto directo desde la app.</div></div>
+    <div class="rule-card" style="border-left-color:var(--warn);"><div class="rule-num">⚠️ DENUNCIAR UN USUARIO</div><div class="rule-text">Si un usuario incumple las reglas escribinos indicando:<br/>• Nombre de usuario<br/>• Descripción del problema<br/>• Capturas de pantalla si las tenés</div></div>
+    <div class="rule-card" style="border-left-color:var(--t3);"><div class="rule-num">🐛 REPORTAR UN ERROR</div><div class="rule-text">Si encontrás un error en la app, describí qué pasó y desde qué dispositivo y lo solucionamos a la brevedad.</div></div>
+    <div style="height:20px;"></div>
+  </div>
+</div>
+
+<!-- REGLAS -->
+<div class="screen" id="s-reglas">
+  <div class="topbar"><button class="back-btn" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Reglas de la comunidad</div></div>
+  <div class="subscreen">
+    <div style="background:var(--vl);border-radius:var(--rl);padding:14px;margin-bottom:14px;font-size:13px;color:var(--vd);font-weight:500;line-height:1.5;">📜 Bienvenido/a a nuestra comunidad. Este es un espacio pensado para compartir, interactuar y disfrutar.</div>
+    <div class="rule-card"><div class="rule-num">1. RESPETO ANTE TODO</div><div class="rule-text">• No se permiten insultos, ataques personales, amenazas ni acoso.<br/>• Cualquier tipo de discriminación está estrictamente prohibida.</div></div>
+    <div class="rule-card"><div class="rule-num">2. CONTENIDO APROPIADO</div><div class="rule-text">• No publiques contenido violento, explícito, ilegal o que resulte ofensivo.<br/>• Evita material que no sea tuyo o que infrinja derechos de autor.</div></div>
+    <div class="rule-card"><div class="rule-num">3. INTERACCIÓN SANA</div><div class="rule-text">• Los comentarios deben ser respetuosos y constructivos.<br/>• No se permite spam, publicidad no autorizada ni mensajes repetitivos.</div></div>
+    <div class="rule-card"><div class="rule-num">4. USO RESPONSABLE</div><div class="rule-text">• No intentes manipular el sistema (likes falsos, cuentas múltiples, etc.).<br/>• Respeta la privacidad de los demás usuarios.</div></div>
+    <div class="rule-card"><div class="rule-num">5. CONSECUENCIAS</div><div class="rule-text">⚠️ Advertencia → ⏳ Suspensión temporal → 🚫 Expulsión permanente</div></div>
+    <div class="rule-card"><div class="rule-num">6. MODERACIÓN</div><div class="rule-text">Los administradores se reservan el derecho de tomar decisiones para mantener el orden y la seguridad.</div></div>
+    <div style="background:var(--bg);border-radius:var(--r);padding:12px;margin-top:4px;font-size:12px;color:var(--t2);line-height:1.6;">📌 Si tenés dudas o querés reportar algo, contactá al equipo de soporte desde tu perfil.</div>
+    <div style="height:20px;"></div>
+  </div>
+</div>
+<!-- ADMIN -->
+<div class="screen" id="s-admin"><div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle" style="color:#BA7517;">Panel Admin ⚙️</div></div><div class="form-wrap" id="admin-content"></div></div>
+
+</div><!-- /app -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ===== VERSION =====
+const APP_VERSION='1.0.3';
+if(localStorage.getItem('puy_version')!==APP_VERSION){Object.keys(localStorage).forEach(k=>{if(k.startsWith('puy4_')||k.startsWith('puy_'))localStorage.removeItem(k);});localStorage.setItem('puy_version',APP_VERSION);}
+window._pendingPushes=0;
+
+const SUPA_URL='https://xcmklvzkryzieabcbfxe.supabase.co';
+const SUPA_KEY='sb_publishable_kORAaoJGuztgkGw5P2ErqA_S8fbWk3g';
+const SH={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=minimal'};
+const SH_REP={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=representation'};
+async function dbGet(t,f=''){
+  try{
+    const sep=f?'&':'';
+    const url=SUPA_URL+'/rest/v1/'+t+'?'+f+sep+'limit=1000';
+    const r=await fetch(url,{headers:{...SH,'Range':'0-999','Range-Unit':'items'}});
+    if(!r.ok){console.error('GET error:',r.status,await r.text());return [];}
+    return await r.json();
+  }catch(e){console.error('GET fail:',e);return [];}
+}
+async function dbPost(t,b){try{const r=await fetch(SUPA_URL+'/rest/v1/'+t,{method:'POST',headers:SH_REP,body:JSON.stringify(b)});if(!r.ok){const e=await r.text();console.error('POST error:',r.status,e);return null;}return await r.json();}catch(e){console.error('POST fail:',e);return null;}}
+async function dbPatch(t,f,b){try{const r=await fetch(SUPA_URL+'/rest/v1/'+t+'?'+f,{method:'PATCH',headers:SH,body:JSON.stringify(b)});if(!r.ok)console.error('PATCH error:',r.status,await r.text());}catch(e){console.error('PATCH fail:',e);}}
+
+async function pushSpot(s){
+  try{
+    // compress spotPhotos for server - keep data but limit size
+    const serverSpot={...s,spotPhotos:(s.spotPhotos||[]).map(p=>({
+      ...p,
+      data:p.data&&p.data.length>50000?p.data.substring(0,50000)+'__TRUNCATED__':p.data
+    }))};
+    // actually send full data - Supabase jsonb supports up to 1GB
+    const ex=await dbGet('spots','id=eq.'+s.id+'&select=id');
+    if(ex&&ex.length){
+      await dbPatch('spots','id=eq.'+s.id,{data:s});
+    } else {
+      const res=await dbPost('spots',{id:s.id,data:s});
+      if(!res)console.error('pushSpot failed for',s.id);
+    }
+  }catch(e){console.error('pushSpot error:',e);}
+}
+
+async function pushFeed(p){
+  try{
+    // strip photos from server copy to avoid size limit (photos stay in spots)
+    const serverCopy={...p,photos:[]};
+    const ex=await dbGet('feed','id=eq.'+p.id+'&select=id');
+    if(ex&&ex.length){
+      await dbPatch('feed','id=eq.'+p.id,{data:serverCopy});
+    } else {
+      const res=await dbPost('feed',{id:p.id,data:serverCopy});
+      if(!res)console.error('pushFeed failed for',p.id);
+    }
+  }catch(e){console.error('pushFeed error:',e);}
+}
+
+async function pushUser(u){try{await dbPatch('users','username=eq.'+u.username,{photo:u.photo,name:u.name});}catch(e){}}
+
+async function syncDB(){
+  try{
+    const sr=await dbGet('spots','order=created_at.asc');
+    if(sr&&sr.length){
+      SPOTS=sr.map(r=>r.data);
+      SPOTS.forEach(s=>{if(!s.spotPhotos)s.spotPhotos=[];if(!s.ratings)s.ratings={};});
+      LS.save('spots',SPOTS);
+    }
+    const fr=await dbGet('feed','order=created_at.desc');
+    if(fr&&fr.length){
+      const localFeed=LS.load('feed',[]);
+      FEED=fr.map(r=>{
+        const serverPost=r.data;
+        // restore photos from local cache if server stripped them
+        const localPost=localFeed.find(lp=>lp.id===serverPost.id);
+        return {
+          ...serverPost,
+          photos:(serverPost.photos&&serverPost.photos.length)?serverPost.photos:(localPost?localPost.photos||[]:[]),
+          likes:serverPost.likes||[],
+          comments:serverPost.comments||[]
+        };
+      });
+      LS.save('feed',FEED);
+    }
+  }catch(e){console.warn('syncDB error:',e);}
+}
+function doLogout(){
+  currentUser=null;
+  LS.save('session',null);
+  LS.save('sessionUser',null);
+  if(window._ar){clearInterval(window._ar);window._ar=null;}
+  switchTab('login');
+  go('login');
+}
+
+// ===== AUTO-LOGIN =====
+(async function(){
+  // show loading screen while checking session
+  const loadEl=document.getElementById('loading-screen');
+  const saved=LS.load('session',null);
+  const savedUser=LS.load('sessionUser',null);
+  if(saved&&savedUser){
+    try{
+      // sync DB first to get fresh spots/feed
+      await syncDB();
+      // verify user still exists
+      const rows=await dbGet('users','username=eq.'+encodeURIComponent(saved)+'&select=username,name,role,initials,photo');
+      if(!rows||!rows.length){
+        // user deleted - clear and go to login
+        LS.save('session',null);LS.save('sessionUser',null);LS.save('users',[]);
+        if(loadEl)loadEl.style.display='none';
+        go('login');return;
+      }
+      const serverUser={...savedUser,...rows[0]};
+      currentUser=serverUser;
+      LS.save('sessionUser',serverUser);
+      const idx=registeredUsers.findIndex(u=>u.username===saved);
+      if(idx>=0)registeredUsers[idx]={...registeredUsers[idx],...serverUser};
+      else registeredUsers.push(serverUser);
+      if(loadEl)loadEl.style.display='none';
+      afterLogin();
+    }catch(e){
+      // network error - use cache
+      currentUser=savedUser;
+      const idx=registeredUsers.findIndex(u=>u.username===saved);
+      if(idx>=0)registeredUsers[idx]={...registeredUsers[idx],...savedUser};
+      else registeredUsers.push(savedUser);
+      if(loadEl)loadEl.style.display='none';
+      afterLogin();
+    }
+    return;
+  }
+  if(loadEl)loadEl.style.display='none';
+  go('login');
+})();
+
+
+// ===== SHARE =====
+function sharePost(postId){
+  const p=FEED.find(x=>x.id===postId);
+  const url=window.location.href.split('?')[0]+'?post='+postId;
+  const text=p?`🎣 ${p.author} en ${p.loc}: ${p.caption||''} - PescaUY`:'🎣 Mirá esta publicación en PescaUY';
+  showShareSheet(url, text);
+}
+function shareSpot(spotId){
+  const s=SPOTS.find(x=>x.id===spotId);
+  const url=window.location.href.split('?')[0]+'?spot='+spotId;
+  const text=s?`🎣 ${s.name} - ${s.loc} | PescaUY`:'🎣 Mirá este lugar de pesca en PescaUY';
+  showShareSheet(url, text);
+}
+function showShareSheet(url, text){
+  // remove existing
+  const old=document.getElementById('share-sheet');if(old)old.remove();
+  const encoded=encodeURIComponent(url);
+  const etxt=encodeURIComponent(text);
+  const sheet=document.createElement('div');
+  sheet.id='share-sheet';
+  sheet.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.5);';
+  sheet.innerHTML=`
+    <div style="background:var(--sf);border-radius:20px 20px 0 0;padding:20px 16px 32px;">
+      <div style="text-align:center;font-size:14px;font-weight:600;color:var(--tx);margin-bottom:16px;">Compartir</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;">
+        <div onclick="window.open('https://wa.me/?text=${etxt}%20${encoded}','_blank');document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+          <div style="width:50px;height:50px;border-radius:14px;background:#25D366;display:flex;align-items:center;justify-content:center;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.561 4.14 1.535 5.875L.057 23.18a.75.75 0 0 0 .916.919l5.453-1.43A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.969 0-3.82-.538-5.408-1.472l-.386-.232-4.007 1.051 1.07-3.904-.253-.403A9.956 9.956 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+          </div>
+          <span style="font-size:10px;color:var(--t2);">WhatsApp</span>
+        </div>
+        <div onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=${encoded}','_blank');document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+          <div style="width:50px;height:50px;border-radius:14px;background:#1877F2;display:flex;align-items:center;justify-content:center;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </div>
+          <span style="font-size:10px;color:var(--t2);">Facebook</span>
+        </div>
+        <div onclick="window.open('https://twitter.com/intent/tweet?text=${etxt}&url=${encoded}','_blank');document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+          <div style="width:50px;height:50px;border-radius:14px;background:#000;display:flex;align-items:center;justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </div>
+          <span style="font-size:10px;color:var(--t2);">X</span>
+        </div>
+        <div onclick="window.open('https://www.instagram.com/','_blank');document.getElementById('share-sheet').remove();showToast('Copiá el enlace y pegalo en Instagram');" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+          <div style="width:50px;height:50px;border-radius:14px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          </div>
+          <span style="font-size:10px;color:var(--t2);">Instagram</span>
+        </div>
+        <div onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('¡Enlace copiado! 📋')).catch(()=>showToast('${url}'));document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+          <div style="width:50px;height:50px;border-radius:14px;background:var(--bg);border:1.5px solid var(--br);display:flex;align-items:center;justify-content:center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--tx)" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </div>
+          <span style="font-size:10px;color:var(--t2);">Copiar</span>
+        </div>
+      </div>
+      <button onclick="document.getElementById('share-sheet').remove();" style="width:100%;padding:13px;border-radius:var(--rl);border:1.5px solid var(--br);background:var(--bg);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+    </div>`;
+  sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.remove();});
+  document.getElementById('app').appendChild(sheet);
+}
+
+
+// ===== IMAGE COMPRESSION (reduces size for mobile uploads) =====
+function compressImage(dataUrl, maxW, quality, cb){
+  if(dataUrl.startsWith('data:video')){cb(dataUrl);return;}
+  const img=new Image();
+  img.onload=function(){
+    const canvas=document.createElement('canvas');
+    let w=img.width,h=img.height;
+    if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+    canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    cb(canvas.toDataURL('image/jpeg',quality));
+  };
+  img.src=dataUrl;
+}
+
+
+
+// ===== STORAGE - server-backed with localStorage fallback =====
+// Detect server URL from current page
+const SERVER = window.location.origin;
+let _serverAvailable = null;
+
+async function _noServer() {
+  if(_serverAvailable !== null) return _serverAvailable;
+  try {
+    const r = await fetch(SERVER+'/api/ping', {method:'GET'});
+    const d = await r.json();
+    _serverAvailable = d.ok === true;
+  } catch(e) { _serverAvailable = false; }
+  return _serverAvailable;
+}
+
+// Local fallback (offline / file:// mode)
+const LS = {
+  save(k,v){try{localStorage.setItem('puy4_'+k,JSON.stringify(v));}catch(e){}},
+  load(k,d){try{const v=localStorage.getItem('puy4_'+k);return v?JSON.parse(v):d;}catch(e){return d;}}
+};
+
+// ===== DEFAULT DATA =====
+const DEF_USERS=[
+  {username:'admin',password:'PescaUY2026!',name:'Administrador',role:'admin',initials:'AD',photo:null},
+];
+// spotPhotos: [{id,data,type:'photo'|'video',author,authorName,authorPhoto,authorInitials,time,likes:[],comments:[],createdAt}]
+const DEF_SPOTS=[];
+
+const DEF_FEED=[];
+
+// ===== STATE =====
+let registeredUsers=LS.load('users',DEF_USERS.map(u=>({...u})));
+if(!registeredUsers.find(u=>u.username==='admin'))registeredUsers.unshift({...DEF_USERS[0]});
+let SPOTS=LS.load('spots',DEF_SPOTS.map(s=>({...s,spotPhotos:s.spotPhotos||[],ratings:s.ratings||{}})));
+SPOTS.forEach(s=>{if(!s.spotPhotos)s.spotPhotos=[];if(!s.ratings)s.ratings={};});
+let FEED=LS.load('feed',DEF_FEED.map(f=>({...f})));
+FEED.forEach(f=>{if(!f.photos)f.photos=[];if(!f.likes)f.likes=[];if(!f.comments)f.comments=[];});
+let currentUser=null;
+let map,pickerMap,markers=[],activeFilter='all';
+let newSpotLat=null,newSpotLng=null,newPhotoData=null,addStarVal=0,pickerCb=null;
+let newSpotMedia=[]; // {data, type:'photo'|'video', isCover:bool}
+// photo detail state: {spotId, photoId}
+let PDO_REF=null;
+
+function saveAll(spotId=null,feedId=null){
+  LS.save('users',registeredUsers);LS.save('spots',SPOTS);LS.save('feed',FEED);
+  if(spotId){const s=SPOTS.find(x=>x.id===spotId);if(s)pushSpot(s);}
+  if(feedId){const f=FEED.find(x=>x.id===feedId);if(f)pushFeed(f);}
+}
+
+
+function _getFavsObj(){
+  const obj={};
+  registeredUsers.forEach(u=>{obj[u.username]=LS.load('favs_'+u.username,[]);});
+  if(currentUser){obj[currentUser.username]=LS.load('favs_'+currentUser.username,[]);}
+  return obj;
+}
+
+// ===== TOAST =====
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ===== NAV =====
+function go(s){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.getElementById('s-'+s).classList.add('active');
+  if(s==='map')setTimeout(()=>{if(map)map.invalidateSize();},120);
+  if(s==='feed'){syncDB().then(()=>renderFeed());}
+  if(s==='favorites')renderFavorites();
+  if(s==='notif')renderNotif();
+  if(s==='admin')renderAdmin();
+  if(s==='profile')updateProfileUI();
+}
+
+// ===== IMG VIEWER =====
+function openImgViewer(src){document.getElementById('img-viewer-img').src=src;document.getElementById('img-viewer').classList.add('open');}
+function closeImgViewer(){document.getElementById('img-viewer').classList.remove('open');}
+
+// ===== PHOTO DETAIL OVERLAY (per-photo likes & comments) =====
+function openPhotoDetail(spotId,photoId){
+  const spot=SPOTS.find(s=>s.id===spotId);if(!spot)return;
+  const photo=(spot.spotPhotos||[]).find(p=>p.id===photoId);if(!photo)return;
+  PDO_REF={spotId,photoId};
+  const pdo=document.getElementById('pdo');
+  // author
+  document.getElementById('pdo-av').innerHTML=photo.authorPhoto?`<img src="${photo.authorPhoto}"/>`:photo.authorInitials||'?';
+  document.getElementById('pdo-name').textContent=photo.authorName||'Usuario';
+  document.getElementById('pdo-time').textContent=photo.time||'';
+  // show counter if multiple photos
+  const _spot=SPOTS.find(s=>s.id===spotId);
+  const _total=_spot?(_spot.spotPhotos||[]).length:1;
+  const _idx=_spot?(_spot.spotPhotos||[]).findIndex(p=>p.id===photoId)+1:1;
+  const ctr=document.getElementById('pdo-counter');
+  if(ctr)ctr.textContent=_total>1?`${_idx}/${_total}`:'';
+  // media
+  const isVid=photo.type==='video';
+  document.getElementById('pdo-media').innerHTML=isVid
+    ?`<video src="${photo.data}" controls style="max-width:100%;max-height:100%;"/>`
+    :`<img src="${photo.data}" onclick="openImgViewer('${photo.data}')" style="max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in;"/>`;
+  refreshPDO(photo);
+  pdo.classList.add('open');
+  // keyboard nav
+  pdo._keyFn && document.removeEventListener('keydown',pdo._keyFn);
+  pdo._keyFn=e=>{if(e.key==='Escape')closePDO();};
+  document.addEventListener('keydown',pdo._keyFn);
+}
+function closePDO(){
+  document.getElementById('pdo').classList.remove('open');
+  PDO_REF=null;
+}
+function pdoNav(dir){
+  if(!PDO_REF)return;
+  const spot=SPOTS.find(s=>s.id===PDO_REF.spotId);
+  if(!spot||!spot.spotPhotos||spot.spotPhotos.length<2)return;
+  const idx=spot.spotPhotos.findIndex(p=>p.id===PDO_REF.photoId);
+  const next=(idx+dir+spot.spotPhotos.length)%spot.spotPhotos.length;
+  openPhotoDetail(PDO_REF.spotId, spot.spotPhotos[next].id);
+}
+// Touch swipe for PDO
+(function(){
+  let sx=0,sy=0;
+  document.getElementById('pdo').addEventListener('touchstart',e=>{
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;
+  },{passive:true});
+  document.getElementById('pdo').addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-sx;
+    const dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){pdoNav(dx<0?1:-1);}
+  },{passive:true});
+})();
+function getPDOPhoto(){
+  if(!PDO_REF)return null;
+  const spot=SPOTS.find(s=>s.id===PDO_REF.spotId);if(!spot)return null;
+  return (spot.spotPhotos||[]).find(p=>p.id===PDO_REF.photoId)||null;
+}
+function refreshPDO(photo){
+  if(!photo)photo=getPDOPhoto();if(!photo)return;
+  const myLike=currentUser&&photo.likes.includes(currentUser.username);
+  const btn=document.getElementById('pdo-like-btn');
+  btn.classList.toggle('liked',myLike);
+  btn.querySelector('svg').setAttribute('fill',myLike?'currentColor':'none');
+  document.getElementById('pdo-lc').textContent=photo.likes.length+' me gusta';
+  document.getElementById('pdo-cc').textContent=(photo.comments||[]).length+' comentarios';
+  // render comments
+  const list=document.getElementById('pdo-comments');
+  list.innerHTML=(photo.comments||[]).map((c,i)=>{
+    const isAdmin=currentUser&&currentUser.role==='admin';
+    const del=isAdmin?`<span onclick="deletePhotoComment(${i})" style="color:var(--danger);font-size:10px;cursor:pointer;margin-left:5px;">✕</span>`:'';
+    const av=c.authorPhoto?`<img src="${c.authorPhoto}"/>`:c.authorInitials||'?';
+    return `<div class="pd-comment-item"><div class="pd-comment-av">${av}</div><div><div class="pd-comment-author">${c.author}${del}</div><div class="pd-comment-text">${c.text}</div><div class="pd-comment-time">${c.time}</div></div></div>`;
+  }).join('');
+  // update grid badge
+  if(PDO_REF){
+    const badge=document.getElementById('badge-'+PDO_REF.photoId);
+    if(badge)badge.innerHTML=`❤️${photo.likes.length}${photo.comments.length?' 💬'+photo.comments.length:''}`;
+  }
+}
+function togglePhotoLike(){
+  if(!currentUser){showToast('Iniciá sesión para dar me gusta');return;}
+  const photo=getPDOPhoto();if(!photo)return;
+  const idx=photo.likes.indexOf(currentUser.username);
+  idx>=0?photo.likes.splice(idx,1):photo.likes.push(currentUser.username);
+  saveAll();refreshPDO(photo);
+}
+function sendPhotoComment(){
+  if(!currentUser){showToast('Iniciá sesión para comentar');return;}
+  const inp=document.getElementById('pdo-inp');
+  const text=inp.value.trim();if(!text)return;
+  const photo=getPDOPhoto();if(!photo)return;
+  if(!photo.comments)photo.comments=[];
+  photo.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:'Ahora mismo',createdAt:Date.now()});
+  saveAll();inp.value='';refreshPDO(photo);showToast('Comentario enviado 💬');
+}
+function deletePhotoComment(idx){
+  if(!currentUser||currentUser.role!=='admin')return;
+  const photo=getPDOPhoto();if(!photo)return;
+  photo.comments.splice(idx,1);saveAll();refreshPDO(photo);
+}
+
+// ===== AUTH =====
+function switchTab(t){
+  document.getElementById('form-login').style.display=t==='login'?'block':'none';
+  document.getElementById('form-register').style.display=t==='register'?'block':'none';
+  document.getElementById('tab-login').classList.toggle('on',t==='login');
+  document.getElementById('tab-register').classList.toggle('on',t==='register');
+  document.querySelectorAll('.auth-error').forEach(e=>e.classList.remove('show'));
+  document.querySelectorAll('.auth-input').forEach(e=>e.classList.remove('error'));
+}
+function doLogin(){
+  const u=document.getElementById('l-user').value.trim();
+  const p=document.getElementById('l-pass').value;
+  document.querySelectorAll('.auth-error').forEach(e=>e.classList.remove('show'));
+  document.querySelectorAll('.auth-input').forEach(e=>e.classList.remove('error'));
+  if(!u){document.getElementById('l-user-err').classList.add('show');document.getElementById('l-user').classList.add('error');return;}
+  if(!p){document.getElementById('l-pass-err').classList.add('show');document.getElementById('l-pass').classList.add('error');return;}
+  // check local cache first
+  const local=registeredUsers.find(x=>(x.username===u||x.email===u)&&x.password===p);
+  if(local){currentUser=local;LS.save('session',local.username);LS.save('sessionUser',local);afterLogin();return;}
+  // fetch from Supabase
+  dbGet('users','username=eq.'+encodeURIComponent(u)+'&select=*').then(rows=>{
+    if(!rows||!rows.length)return dbGet('users','email=eq.'+encodeURIComponent(u)+'&select=*');
+    return rows;
+  }).then(rows=>{
+    if(!rows||!rows.length){document.getElementById('l-general-err').classList.add('show');return;}
+    const su=rows[0];
+    if(su.password!==p){document.getElementById('l-general-err').classList.add('show');return;}
+    const user={username:su.username,name:su.name,role:su.role||'user',initials:su.initials,photo:su.photo||null,password:p,email:su.email||''};
+    const idx=registeredUsers.findIndex(x=>x.username===user.username);
+    if(idx>=0)registeredUsers[idx]=user;else registeredUsers.push(user);
+    LS.save('users',registeredUsers);
+    currentUser=user;LS.save('session',user.username);LS.save('sessionUser',user);
+    afterLogin();
+  }).catch(()=>document.getElementById('l-general-err').classList.add('show'));
+}
+
+
+function doRegister(){
+  const name=document.getElementById('r-name').value.trim();
+  const uname=document.getElementById('r-user').value.trim().toLowerCase();
+  const email=document.getElementById('r-email').value.trim().toLowerCase();
+  const pass=document.getElementById('r-pass').value;
+  document.querySelectorAll('.auth-error').forEach(e=>e.classList.remove('show'));
+  if(!name){document.getElementById('r-name-err').classList.add('show');return;}
+  if(!uname){document.getElementById('r-user-err').classList.add('show');return;}
+  if(!email||!email.includes('@')){document.getElementById('r-email-err').classList.add('show');return;}
+  if(pass.length<6){document.getElementById('r-pass-err').classList.add('show');return;}
+  if(registeredUsers.find(x=>x.username===uname)){
+    document.getElementById('r-user-err').textContent='Usuario ya existe';
+    document.getElementById('r-user-err').classList.add('show');return;
+  }
+  const initials=name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  const nu={username:uname,email,password:pass,name,role:'user',initials,photo:null};
+  dbPost('users',nu).then(()=>{
+    registeredUsers.push(nu);currentUser=nu;
+    LS.save('users',registeredUsers);
+    LS.save('session',nu.username);LS.save('sessionUser',nu);
+    saveAll();afterLogin();
+  }).catch(()=>{
+    registeredUsers.push(nu);currentUser=nu;
+    LS.save('users',registeredUsers);
+    LS.save('session',nu.username);LS.save('sessionUser',nu);
+    saveAll();afterLogin();
+  });
+}
+
+
+function afterLogin(){
+  updateProfileUI();
+  document.getElementById('admin-fab').style.display=currentUser.role==='admin'?'flex':'none';
+  loadWeather();
+  // sync FIRST, then render map with fresh data
+  syncDB().then(()=>{
+    go('map');
+    setTimeout(initMap,150);
+    updateProfileUI();
+  });
+  if(!window._ar)window._ar=setInterval(()=>{
+    syncDB().then(()=>{
+      renderMarkers(activeFilter);renderSheet(activeFilter);
+      if(document.getElementById('s-feed').classList.contains('active'))renderFeed();
+    });
+  },20000);
+}
+
+
+function updateProfileUI(){
+  if(!currentUser)return;
+  document.getElementById('prof-name-display').textContent=currentUser.name;
+  document.getElementById('prof-bio-display').textContent=(currentUser.role==='admin'?'Administrador':'Pescador')+' · PescaUY';
+  const editBtn=`<div class="prof-av-edit"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><path d="M11 4H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>`;
+  const el=document.getElementById('prof-av-lg');
+  el.innerHTML=currentUser.photo?`<img src="${currentUser.photo}"/>${editBtn}`:`<span>${currentUser.initials||'?'}</span>${editBtn}`;
+  document.querySelectorAll('.avatar-btn').forEach(a=>{a.innerHTML=currentUser.photo?`<img src="${currentUser.photo}"/>`:currentUser.initials||'?';});
+  const mySpots=SPOTS.filter(s=>s.author===currentUser.username).length;
+  const myPhotos=SPOTS.reduce((acc,s)=>acc+(s.spotPhotos||[]).filter(p=>p.author===currentUser.username).length,0);
+  const sl=document.getElementById('stat-lugares');if(sl)sl.textContent=mySpots;
+  const sf=document.getElementById('stat-fotos');if(sf)sf.textContent=myPhotos;
+}
+function updateProfilePhoto(input){
+  if(!input.files||!input.files[0])return;
+  const r=new FileReader();
+  r.onload=e=>{
+    currentUser.photo=e.target.result;
+    const idx=registeredUsers.findIndex(u=>u.username===currentUser.username);
+    if(idx>=0)registeredUsers[idx].photo=e.target.result;
+    saveAll();pushUser(currentUser);LS.save('sessionUser',currentUser);updateProfileUI();showToast('Foto actualizada ✅');
+  };r.readAsDataURL(input.files[0]);
+}
+
+// ===== MAP =====
+function initMap(){
+  if(map)return;
+  map=L.map('map',{zoomControl:false}).setView([-32.8,-56.2],6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(map);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  renderMarkers('all');renderSheet('all');initFilterDrag();
+}
+function makeIcon(s){return L.divIcon({className:'',html:`<div class="custom-pin ${s.pub?'':'priv'}">${s.emoji}</div>`,iconSize:[34,34],iconAnchor:[17,17]});}
+function renderMarkers(f){
+  markers.forEach(m=>m.remove());markers=[];
+  (f==='all'?SPOTS:SPOTS.filter(s=>s.filter.includes(f))).forEach(s=>{
+    const m=L.marker([s.lat,s.lng],{icon:makeIcon(s)});
+    m.on('click',()=>openSpot(s.id));m.addTo(map);markers.push(m);
+  });
+}
+function initFilterDrag(){
+  const bar=document.getElementById('filter-bar');
+  let down=false,sx,sl,moved=false;
+  bar.addEventListener('mousedown',e=>{down=true;moved=false;sx=e.pageX-bar.offsetLeft;sl=bar.scrollLeft;bar.style.cursor='grabbing';});
+  window.addEventListener('mouseup',()=>{down=false;bar.style.cursor='';});
+  bar.addEventListener('mousemove',e=>{if(!down)return;e.preventDefault();moved=true;bar.scrollLeft=sl-(e.pageX-bar.offsetLeft-sx);});
+  bar.addEventListener('click',e=>{if(moved){e.stopPropagation();moved=false;}},true);
+}
+function setFilter(el,f){
+  document.querySelectorAll('.fpill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');activeFilter=f;renderMarkers(f);renderSheet(f);
+}
+function renderSheet(f){
+  const list=f==='all'?SPOTS:SPOTS.filter(s=>s.filter.includes(f));
+  const sh=document.getElementById('bottom-sheet');
+  if(!list.length){sh.innerHTML=`<div class="no-results">🔍 No hay lugares para este filtro.</div>`;return;}
+  sh.innerHTML=list.map(s=>{
+    const thumb=s.spotPhotos&&s.spotPhotos[0]?`<img src="${s.spotPhotos[0].data}" style="width:100%;height:100%;object-fit:cover;">`:`${s.emoji}`;
+    return `<div class="spot-row" onclick="openSpot('${s.id}')">
+      <div class="spot-icon-wrap">${thumb}</div>
+      <div class="spot-info"><div class="spot-name">${s.name}</div>
+        <div class="spot-meta"><span class="stars-inline">${'★'.repeat(Math.round(s.stars))}</span><span>${s.stars.toFixed(1)} (${s.votes})</span> · ${s.loc}</div>
+        <div class="tags-row">${s.species.slice(0,3).map(x=>`<span class="tag fish">${x}</span>`).join('')}</div>
+      </div>
+      <span class="badge ${s.pub?'':'priv'}">${s.pub?'Público':'Privado'}</span>
+    </div>`;}).join('');
+}
+
+// ===== OPEN SPOT =====
+function buildStarsHtml(s){return [1,2,3,4,5].map(i=>`<span class="star-lg ${i<=Math.round(s.stars)?'':'e'}">★</span>`).join('')+`<span style="font-size:15px;font-weight:600;margin-left:4px;">${s.stars.toFixed(1)}</span><span style="font-size:12px;color:var(--t2);margin-left:4px;">(${s.votes} votos)</span>`;}
+
+function openSpot(id){
+  const s=SPOTS.find(x=>x.id===id);if(!s)return;
+  const favs=LS.load('favs_'+(currentUser?currentUser.username:''),[]);
+  const isFav=favs.includes(s.id);
+  const isAdmin=currentUser&&currentUser.role==='admin';
+  const myRating=s.ratings&&currentUser?s.ratings[currentUser.username]:undefined;
+  const fp=FEED.find(p=>p.spotId===s.id);
+  const myLike=fp&&currentUser&&fp.likes.includes(currentUser.username);
+  const photos=s.spotPhotos||[];
+  // photo grid with per-photo like/comment badges
+  const photoGridHtml=photos.length>0?`
+    <div class="sec-label">📸 Fotos (${photos.length}) — tocá para ver con me gusta y comentarios</div>
+    <div class="photo-grid">${photos.map(p=>{
+      const isVid=p.type==='video';
+      const lc=p.likes?p.likes.length:0;
+      const cc=p.comments?p.comments.length:0;
+      return `<div class="photo-grid-item" onclick="openPhotoDetail('${s.id}','${p.id}')">
+        ${isVid?`<video src="${p.data}" style="width:100%;height:100%;object-fit:cover;">`:`<img src="${p.data}"/>`}
+        ${isVid?`<div class="vid-badge">▶</div>`:''}
+        <div class="photo-likes-badge" id="badge-${p.id}">❤️${lc}${cc?' 💬'+cc:''}</div>
+      </div>`;}).join('')}
+    </div>`:'';
+  // spot-level comments (from feed post)
+  const commHtml=fp?(fp.comments||[]).map((c,ci)=>{
+    const dBtn=isAdmin?`<span onclick="deleteSpotComment('${fp.id}',${ci});openSpot('${id}')" style="color:var(--danger);font-size:10px;cursor:pointer;margin-left:5px;">✕</span>`:'';
+    const av=c.authorPhoto?`<img src="${c.authorPhoto}"/>`:c.authorInitials||'?';
+    return `<div style="display:flex;gap:8px;margin-bottom:8px;">
+      <div style="width:26px;height:26px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">${av}</div>
+      <div style="flex:1;background:var(--bg);border-radius:0 var(--r) var(--r) var(--r);padding:7px 10px;"><strong style="font-size:11px;">${c.author}</strong>${dBtn}<div style="font-size:12px;margin-top:2px;">${c.text}</div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${c.time}</div></div>
+    </div>`;}).join(''):'';
+
+  document.getElementById('det-content').innerHTML=`
+    <div style="width:100%;height:200px;background:linear-gradient(135deg,#9FE1CB,#085041);display:flex;align-items:center;justify-content:center;font-size:56px;overflow:hidden;cursor:pointer;" onclick="${photos[0]?`openImgViewer('${photos[0].data}')`:''}">
+      ${photos[0]?`<img src="${photos[0].data}" style="width:100%;height:100%;object-fit:cover;"/>`:`<span>${s.emoji}</span>`}
+    </div>
+    <div class="det-body">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px;">
+        <div class="det-title">${s.name}</div>
+        <span class="badge ${s.pub?'':'priv'}" style="flex-shrink:0;margin-left:8px;">${s.pub?'Público':'Privado'}</span>
+      </div>
+      <div class="det-loc"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${s.loc}</div>
+      <div class="sec-label">Valoración de la comunidad</div>
+      <div class="stars-row" id="spot-stars-${s.id}">${buildStarsHtml(s)}</div>
+      <div class="sec-label">${myRating!==undefined?'Tu calificación (podés cambiarla)':'Calificá este lugar'}</div>
+      <div class="user-rate-row" id="usr-rate-${s.id}">
+        ${[1,2,3,4,5].map(i=>`<span class="usr-star ${myRating&&i<=myRating?'on':''}" onclick="rateSpot('${s.id}',${i})">★</span>`).join('')}
+        ${myRating!==undefined?`<span style="font-size:12px;color:var(--t2);margin-left:6px;">Tu voto: ${myRating}⭐</span>`:''}
+      </div>
+      <div class="sec-label">Datos</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="info-box-label">Tipo</div><div class="info-box-val">${s.type}</div></div>
+        <div class="info-box"><div class="info-box-label">Época</div><div class="info-box-val">${s.season}</div></div>
+        <div class="info-box"><div class="info-box-label">Profundidad</div><div class="info-box-val">${s.depth}</div></div>
+        <div class="info-box"><div class="info-box-label">Acceso</div><div class="info-box-val">${s.pub?'Libre':'Con permiso'}</div></div>
+      </div>
+      <div class="sec-label">Especies</div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:14px;">
+        ${s.species.map(sp=>`<div class="info-box" style="text-align:center;"><div style="font-size:20px;margin-bottom:3px;">🐟</div><div style="font-size:11px;font-weight:600;">${sp}</div></div>`).join('')}
+      </div>
+      <div class="sec-label">Carnada</div>
+      <div class="tags-row" style="margin-bottom:14px;">${s.baits.map(b=>`<span class="tag bait">${b}</span>`).join('')}</div>
+      <div class="comment-card">${s.comment}</div>
+      ${photoGridHtml}
+      <button class="act-btn outline" style="width:100%;margin-bottom:10px;" onclick="openAddPhotosToSpot('${s.id}')">📸 Mis fotos/videos (máx 5 fotos + 2 videos por usuario)</button>
+      ${fp?`
+      <div style="display:flex;border:1px solid var(--br);border-radius:var(--r);margin-bottom:12px;overflow:hidden;">
+        <div style="flex:1;padding:10px;text-align:center;cursor:pointer;font-size:13px;font-weight:500;color:${myLike?'var(--danger)':'var(--t2)'};" onclick="toggleSpotLike('${fp.id}','${id}')">❤️ <span id="spot-lc-${id}">${fp.likes.length}</span> me gusta</div>
+        <div style="flex:1;padding:10px;text-align:center;border-left:1px solid var(--br);font-size:13px;color:var(--t2);cursor:pointer;" onclick="document.getElementById('spot-ci-${id}').focus()">💬 <span id="spot-cc-${id}">${fp.comments.length}</span> comentarios</div>
+      </div>
+      <div id="spot-comments-${id}" style="margin-bottom:10px;">${commHtml}</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+        <input type="text" id="spot-ci-${id}" placeholder="Comentá este lugar..." style="flex:1;padding:9px 12px;border-radius:20px;border:1.5px solid var(--br);background:var(--bg);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;" onkeydown="if(event.key==='Enter')sendSpotComment('${fp.id}','${id}')"/>
+        <button style="width:34px;height:34px;border-radius:50%;background:var(--v);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;" onclick="sendSpotComment('${fp.id}','${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" width="15" height="15"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+      </div>`:''}
+      <div class="action-row">
+        <button class="act-btn outline" id="fav-btn-${s.id}" onclick="toggleFavorite('${s.id}')">${isFav?'❤️ Guardado':'🤍 Guardar'}</button>
+        <button class="act-btn" onclick="openDirections(${s.lat},${s.lng})">📍 Cómo llegar</button>
+      </div>
+      <button class="act-btn outline" style="width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="shareSpot('${s.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Compartir este lugar
+      </button>
+      ${isAdmin?`<div class="admin-section"><div class="admin-section-title">⚙️ Admin</div>
+        <button class="act-btn" style="background:#BA7517;margin-bottom:8px;width:100%;" onclick="moveSpotAdmin('${s.id}')">📍 Mover punto</button>
+        <button class="act-btn danger" style="width:100%;" onclick="deleteSpot('${s.id}')">🗑 Eliminar lugar</button>
+      </div>`:''}
+      <div style="height:16px;"></div>
+    </div>`;
+  go('detail');
+}
+
+function rateSpot(id,val){
+  if(!currentUser){showToast('Iniciá sesión para calificar');return;}
+  const s=SPOTS.find(x=>x.id===id);if(!s)return;
+  if(!s.ratings)s.ratings={};
+  const isNew=s.ratings[currentUser.username]===undefined;
+  s.ratings[currentUser.username]=val;
+  const vals=Object.values(s.ratings);s.votes=vals.length;s.stars=Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*10)/10;
+  const row=document.getElementById('usr-rate-'+id);
+  if(row)row.querySelectorAll('.usr-star').forEach((el,i)=>el.classList.toggle('on',i<val));
+  const stEl=document.getElementById('spot-stars-'+id);if(stEl)stEl.innerHTML=buildStarsHtml(s);
+  saveAll();showToast(isNew?'Calificación guardada ⭐':'Calificación actualizada ⭐');
+}
+function toggleFavorite(id){
+  const key='favs_'+(currentUser?currentUser.username:'');
+  const favs=LS.load(key,[]);
+  const idx=favs.indexOf(id);idx>=0?favs.splice(idx,1):favs.push(id);
+  LS.save(key,favs);
+  const btn=document.getElementById('fav-btn-'+id);
+  if(btn)btn.textContent=favs.includes(id)?'❤️ Guardado':'🤍 Guardar';
+  showToast(favs.includes(id)?'Guardado en favoritos ❤️':'Eliminado de favoritos');
+}
+function openDirections(lat,lng){window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`,'_blank');}
+function deleteSpot(id){
+  if(!confirm('¿Eliminar este lugar?'))return;
+  SPOTS=SPOTS.filter(s=>s.id!==id);saveAll();renderMarkers(activeFilter);renderSheet(activeFilter);go('map');showToast('Lugar eliminado');
+}
+function moveSpotAdmin(id){
+  const s=SPOTS.find(x=>x.id===id);if(!s)return;
+  openMapPickerFn(s.lat,s.lng,(lat,lng)=>{s.lat=lat;s.lng=lng;saveAll();renderMarkers(activeFilter);showToast('Ubicación actualizada ✅');go('detail');setTimeout(()=>openSpot(id),100);});
+}
+function toggleSpotLike(fpId,spotId){
+  if(!currentUser){showToast('Iniciá sesión para dar me gusta');return;}
+  const fp=FEED.find(p=>p.id===fpId);if(!fp)return;
+  const idx=fp.likes.indexOf(currentUser.username);idx>=0?fp.likes.splice(idx,1):fp.likes.push(currentUser.username);
+  saveAll();
+  const el=document.getElementById('spot-lc-'+spotId);if(el)el.textContent=fp.likes.length;
+}
+function sendSpotComment(fpId,spotId){
+  if(!currentUser){showToast('Iniciá sesión para comentar');return;}
+  const inp=document.getElementById('spot-ci-'+spotId);if(!inp)return;
+  const text=inp.value.trim();if(!text)return;
+  const fp=FEED.find(p=>p.id===fpId);if(!fp)return;
+  fp.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:'Ahora mismo',createdAt:Date.now()});
+  saveAll();inp.value='';
+  const ccEl=document.getElementById('spot-cc-'+spotId);if(ccEl)ccEl.textContent=fp.comments.length;
+  const listEl=document.getElementById('spot-comments-'+spotId);
+  if(listEl){
+    const av=currentUser.photo?`<img src="${currentUser.photo}"/>`:currentUser.initials||'?';
+    const div=document.createElement('div');div.style.cssText='display:flex;gap:8px;margin-bottom:8px;';
+    div.innerHTML=`<div style="width:26px;height:26px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">${av}</div><div style="flex:1;background:var(--bg);border-radius:0 var(--r) var(--r) var(--r);padding:7px 10px;"><strong style="font-size:11px;">${currentUser.name}</strong><div style="font-size:12px;margin-top:2px;">${text}</div><div style="font-size:10px;color:var(--t3);margin-top:2px;">Ahora mismo</div></div>`;
+    listEl.appendChild(div);
+  }
+  showToast('Comentario enviado 💬');
+}
+function deleteSpotComment(fpId,idx){
+  if(!currentUser||currentUser.role!=='admin')return;
+  if(!confirm('¿Eliminar comentario?'))return;
+  const fp=FEED.find(p=>p.id===fpId);if(!fp)return;
+  fp.comments.splice(idx,1);saveAll();showToast('Comentario eliminado');
+}
+
+// ===== ADD PHOTOS (per user: max 5 photos + 2 videos) =====
+function openAddPhotosToSpot(spotId){
+  if(!currentUser){showToast('Iniciá sesión para agregar fotos');return;}
+  const spot=SPOTS.find(s=>s.id===spotId);if(!spot)return;
+  const mine=(spot.spotPhotos||[]).filter(p=>p.author===currentUser.username);
+  const myPh=mine.filter(p=>p.type!=='video').length;
+  const myVi=mine.filter(p=>p.type==='video').length;
+  if(myPh>=5&&myVi>=2){showToast('Ya subiste el máximo para este lugar (5 fotos + 2 videos)');return;}
+  const inp=document.createElement('input');
+  inp.type='file';inp.multiple=true;
+  inp.accept=myVi<2?'image/*,video/*':'image/*';
+  inp.onchange=function(){
+    if(!this.files||!this.files.length)return;
+    let ph=myPh,vi=myVi,added=0,skipped=0;
+    const promises=Array.from(this.files).map(file=>{
+      const isV=file.type.startsWith('video/');
+      if(isV&&vi>=2){skipped++;return null;}
+      if(!isV&&ph>=5){skipped++;return null;}
+      isV?vi++:ph++;
+      return new Promise(res=>{const r=new FileReader();r.onload=e=>{
+          if(isV){res({data:e.target.result,type:'video'});return;}
+          compressImage(e.target.result,1200,0.75,compressed=>res({data:compressed,type:'photo'}));
+        };r.readAsDataURL(file);});
+    }).filter(Boolean);
+    Promise.all(promises).then(results=>{
+      if(!spot.spotPhotos)spot.spotPhotos=[];
+      results.forEach(r=>{
+        spot.spotPhotos.push({id:'ph_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),data:r.data,type:r.type,
+          author:currentUser.username,authorName:currentUser.name,authorPhoto:currentUser.photo||null,authorInitials:currentUser.initials,
+          time:new Date().toLocaleString('es-UY'),likes:[],comments:[],createdAt:Date.now()});
+        added++;
+      });
+      saveAll();
+      showToast(`✅ ${added} archivo(s) agregado(s)${skipped?' ('+skipped+' omitidos)':''}`);
+      openSpot(spotId);
+    });
+  };
+  inp.click();
+}
+
+// ===== MAP PICKER =====
+function openMapPicker(){openMapPickerFn(null,null,null);}
+function openMapPickerFn(lat,lng,cb){
+  pickerCb=cb||null;
+  document.getElementById('map-picker-screen').classList.add('open');
+  setTimeout(()=>{
+    if(!pickerMap){
+      pickerMap=L.map('map-picker-leaflet',{zoomControl:true}).setView([lat||(-32.8),lng||(-56.2)],lat?13:6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(pickerMap);
+    }else{pickerMap.invalidateSize();if(lat)pickerMap.setView([lat,lng],13);}
+  },120);
+}
+function closeMapPicker(confirm){
+  document.getElementById('map-picker-screen').classList.remove('open');
+  if(!confirm)return;
+  const c=pickerMap.getCenter();
+  const lat=Math.round(c.lat*10000)/10000,lng=Math.round(c.lng*10000)/10000;
+  if(pickerCb){pickerCb(lat,lng);}
+  else{newSpotLat=lat;newSpotLng=lng;document.getElementById('loc-set').style.display='block';document.getElementById('loc-set').textContent=`✅ ${lat}, ${lng}`;document.getElementById('loc-btn').textContent='✅ Punto seleccionado — tocá para cambiar';}
+}
+
+// ===== PUBLISH SPOT =====
+function addNewSpotPhotos(input, mediaType){
+  if(!input.files||!input.files.length)return;
+  const photos=newSpotMedia.filter(m=>m.type==='photo').length;
+  const videos=newSpotMedia.filter(m=>m.type==='video').length;
+  const maxP=5,maxV=2;
+  Array.from(input.files).forEach(file=>{
+    const curP=newSpotMedia.filter(m=>m.type==='photo').length;
+    const curV=newSpotMedia.filter(m=>m.type==='video').length;
+    if(mediaType==='photo'&&curP>=maxP){showToast('Máximo 5 fotos');return;}
+    if(mediaType==='video'&&curV>=maxV){showToast('Máximo 2 videos');return;}
+    const r=new FileReader();
+    r.onload=e=>{
+      const data=e.target.result;
+      if(mediaType==='photo'){
+        compressImage(data,1200,0.75,compressed=>{
+          newSpotMedia.push({data:compressed,type:'photo',isCover:newSpotMedia.length===0});
+          renderNewSpotPhotos();
+        });
+      } else {
+        newSpotMedia.push({data,type:'video',isCover:false});
+        renderNewSpotPhotos();
+      }
+    };
+    r.readAsDataURL(file);
+  });
+  input.value='';
+}
+function renderNewSpotPhotos(){
+  const grid=document.getElementById('new-photos-preview');
+  if(!grid)return;
+  if(!newSpotMedia.length){grid.innerHTML='';return;}
+  grid.innerHTML=newSpotMedia.map((m,i)=>{
+    const isVid=m.type==='video';
+    const coverBadge=m.isCover?'<div style="position:absolute;bottom:3px;left:3px;background:var(--v);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;">PORTADA</div>':'';
+    const media=isVid?`<video src="${m.data}" style="width:100%;height:100%;object-fit:cover;">`:`<img src="${m.data}" style="width:100%;height:100%;object-fit:cover;"/>`;
+    return `<div style="aspect-ratio:1;position:relative;border-radius:8px;overflow:hidden;border:${m.isCover?'2px solid var(--v)':'1px solid var(--br)'};">
+      ${media}
+      ${coverBadge}
+      ${!m.isCover&&m.type==='photo'?`<div onclick="setNewSpotCover(${i})" style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;cursor:pointer;">Portada</div>`:''}
+      <div onclick="removeNewSpotMedia(${i})" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;">✕</div>
+    </div>`;
+  }).join('');
+}
+function setNewSpotCover(idx){
+  newSpotMedia.forEach((m,i)=>m.isCover=(i===idx&&m.type==='photo'));
+  renderNewSpotPhotos();
+}
+function removeNewSpotMedia(idx){
+  newSpotMedia.splice(idx,1);
+  if(newSpotMedia.length&&!newSpotMedia.find(m=>m.isCover)&&newSpotMedia[0].type==='photo')newSpotMedia[0].isCover=true;
+  renderNewSpotPhotos();
+}
+function previewPhoto(input){
+  if(!input.files||!input.files[0])return;
+  const r=new FileReader();
+  r.onload=e=>{compressImage(e.target.result,1200,0.75,compressed=>{newPhotoData=compressed;const a=document.getElementById('photo-area');a.innerHTML=`<img src="${newPhotoData}"/><div class="overlay">Tocá para cambiar</div>`;});};
+  r.readAsDataURL(input.files[0]);
+}
+function setAddStar(v){addStarVal=v;document.querySelectorAll('#add-stars .rate-star').forEach((s,i)=>s.classList.toggle('on',i<v));}
+function publishSpot(){
+  const name=document.getElementById('add-name').value.trim();
+  const dept=document.getElementById('add-dept').value;
+  if(!name){showToast('⚠️ Ingresá el nombre');return;}
+  if(!dept){showToast('⚠️ Seleccioná el departamento');return;}
+  if(!newSpotLat||!newSpotLng){showToast('⚠️ Seleccioná la ubicación en el mapa');return;}
+  const species=[...document.querySelectorAll('#chips-species .chip.on')].map(c=>c.textContent);
+  if(!species.length){showToast('⚠️ Seleccioná al menos una especie');return;}
+  const baits=[...document.querySelectorAll('#chips-bait .chip.on')].map(c=>c.textContent);
+  const type=[...document.querySelectorAll('#chips-tipo .chip.on')].map(c=>c.textContent).join(' / ')||'Orilla';
+  const access=document.querySelector('#chips-access .chip.on')?.textContent||'Público';
+  const comment=document.getElementById('add-comment').value.trim();
+  const filterKeys=species.map(s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
+  // build spotPhotos from newSpotMedia
+  const photoEntry=newSpotMedia.map((m,i)=>({
+    id:'ph_init_'+Date.now()+'_'+i,
+    data:m.data,type:m.type,
+    author:currentUser.username,authorName:currentUser.name,
+    authorPhoto:currentUser.photo||null,authorInitials:currentUser.initials,
+    time:new Date().toLocaleString('es-UY'),likes:[],comments:[],createdAt:Date.now(),
+    isCover:m.isCover||false
+  }));
+  // cover photo for feed
+  const coverMedia=newSpotMedia.find(m=>m.isCover)||newSpotMedia.find(m=>m.type==='photo')||newSpotMedia[0]||null;
+  newPhotoData=coverMedia?coverMedia.data:null;
+  const newSpot={id:'s_'+Date.now(),name,loc:dept,lat:newSpotLat,lng:newSpotLng,pub:access==='Público',stars:addStarVal||4,votes:1,ratings:{},species,baits,type,season:'Todo el año',depth:'Variable',emoji:'🎣',comment:comment||'Lugar agregado por la comunidad.',filter:filterKeys,spotPhotos:photoEntry,author:currentUser?currentUser.username:'user',createdAt:Date.now()};
+  SPOTS.push(newSpot);pushSpot(newSpot);
+  // store photo separately to avoid Supabase size limit
+  const fpPhotos=newPhotoData?[newPhotoData]:[];
+  const fp={id:'f_'+Date.now(),spotId:newSpot.id,authorUsername:currentUser?currentUser.username:'',author:currentUser?currentUser.name:'Usuario',authorInitials:currentUser?currentUser.initials:'?',authorPhoto:currentUser?currentUser.photo:null,time:'Recién publicado',loc:name,bg:'linear-gradient(135deg,#9FE1CB,#085041)',photos:[],emoji:'🎣',caption:comment||'Nuevo lugar de pesca.',species,baits,tipo:[type],likes:[],comments:[],createdAt:Date.now()};
+  // push to server without photos first, then add photos locally
+  FEED.unshift({...fp,photos:fpPhotos});
+  pushFeed(fp).then(()=>{
+    // after server save, update local with photos
+    const localFp=FEED.find(x=>x.id===fp.id);
+    if(localFp)localFp.photos=fpPhotos;
+    LS.save('feed',FEED);
+  });
+  saveAll();
+  document.getElementById('add-name').value='';document.getElementById('add-dept').value='';document.getElementById('add-comment').value='';
+  document.getElementById('loc-set').style.display='none';document.getElementById('loc-btn').textContent='Seleccionar punto en el mapa';
+  document.querySelectorAll('#s-add .chip').forEach(c=>c.classList.remove('on'));
+  document.querySelector('#chips-tipo .chip').classList.add('on');document.querySelector('#chips-access .chip').classList.add('on');
+  document.querySelectorAll('#add-stars .rate-star').forEach(s=>s.classList.remove('on'));
+  // photo reset handled by renderNewSpotPhotos()
+  newSpotLat=null;newSpotLng=null;newPhotoData=null;addStarVal=0;newSpotMedia=[];renderNewSpotPhotos();
+  renderMarkers(activeFilter);renderSheet(activeFilter);updateProfileUI();
+  go('feed');showToast('🎉 ¡Lugar publicado!');
+}
+
+// ===== FEED =====
+function renderFeed(){
+  const el=document.getElementById('feed-list');
+  if(!FEED.length){el.innerHTML=`<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;"><div style="font-size:36px;margin-bottom:10px;">🎣</div>No hay publicaciones aún.</div>`;return;}
+  el.innerHTML=FEED.map(p=>buildFeedCard(p)).join('');
+  const fa=document.getElementById('feed-avatar');
+  if(fa&&currentUser){fa.innerHTML=currentUser.photo?`<img src="${currentUser.photo}"/>`:currentUser.initials||'?';}
+  // init carousel touch on all feed cards
+  setTimeout(()=>{FEED.forEach(p=>{const cid='fcar-'+p.id;if(document.getElementById(cid))initCarouselTouch(cid);});},80);
+}
+function buildFeedCard(p){
+  if(!p.photos)p.photos=[];if(!p.likes)p.likes=[];if(!p.comments)p.comments=[];
+  const myLike=currentUser&&p.likes.includes(currentUser.username);
+  const avHtml=p.authorPhoto?`<img src="${p.authorPhoto}"/>`:p.authorInitials||'?';
+  // get photos: from feed post, or from linked spot
+  let cardPhotos=p.photos||[];
+  if(!cardPhotos.length&&p.spotId){
+    const spot=SPOTS.find(s=>s.id===p.spotId);
+    if(spot&&spot.spotPhotos&&spot.spotPhotos.length){
+      cardPhotos=spot.spotPhotos.map(sp=>sp.data).filter(Boolean);
+    }
+  }
+  // media
+  let mediaHtml='';
+  if(cardPhotos.length>1){
+    const cid='fcar-'+p.id;
+    const slides=cardPhotos.map(ph=>`<div class="carousel-slide"><img src="${ph}" onclick="openImgViewer('${ph}')"/></div>`).join('');
+    const dots=cardPhotos.map((_,i)=>`<div class="carousel-dot ${i===0?'on':''}" id="${cid}-dot-${i}"></div>`).join('');
+    mediaHtml=`<div class="feed-media"><div class="carousel" id="${cid}" data-idx="0" data-total="${cardPhotos.length}" style="height:300px;width:100%;border-radius:0;">
+      <div class="carousel-track" id="${cid}-track">${slides}</div>
+      <button class="carousel-btn prev" onclick="carouselMove('${cid}',-1)">‹</button>
+      <button class="carousel-btn next" onclick="carouselMove('${cid}',1)">›</button>
+      <div class="carousel-dots">${dots}</div>
+      <div class="carousel-counter"><span id="${cid}-cur">1</span>/${cardPhotos.length}</div>
+    </div></div>`;
+  } else if(cardPhotos.length===1){
+    mediaHtml=`<div class="feed-media"><img src="${cardPhotos[0]}" onclick="openImgViewer('${cardPhotos[0]}')" style="max-height:400px;object-fit:cover;width:100%;display:block;"/></div>`;
+  } else {
+    mediaHtml=`<div class="feed-media" style="height:240px;${p.bg?'background:'+p.bg:''};display:flex;align-items:center;justify-content:center;font-size:64px;">${p.emoji}</div>`;
+  }
+  const shownComments=p.comments.slice(0,2).map(c=>{
+    const cav=c.authorPhoto?`<img src="${c.authorPhoto}"/>`:c.authorInitials||'?';
+    return `<div class="feed-comment-item"><div class="feed-comment-av">${cav}</div><div><div class="feed-comment-text"><strong>${c.author}</strong> ${c.text}</div><div class="feed-comment-time">${c.time}</div></div></div>`;
+  }).join('');
+  const more=p.comments.length>2?`<div class="feed-view-comments" onclick="expandFeedComments('${p.id}')">Ver los ${p.comments.length} comentarios</div>`:'';
+  const curAv=currentUser?(currentUser.photo?`<img src="${currentUser.photo}"/>`:currentUser.initials||'?'):'?';
+  return `<div class="feed-card" id="fc_${p.id}">
+    <div class="feed-header">
+      <div class="feed-av">${avHtml}</div>
+      <div style="flex:1;"><div class="feed-name">${p.author}</div><div class="feed-time">${p.time}</div>
+        <div class="feed-loc" onclick="${p.spotId?`openSpot('${p.spotId}')`:''}">${p.loc?'📍 '+p.loc:''}</div>
+      </div>
+    </div>
+    ${mediaHtml}
+    <div class="feed-actions-bar">
+      <button class="feed-action-btn ${myLike?'liked':''}" id="flike-${p.id}" onclick="toggleFeedLike('${p.id}')">
+        <svg viewBox="0 0 24 24" fill="${myLike?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      <button class="feed-action-btn" onclick="document.getElementById('fc-inp-${p.id}').focus()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <button class="feed-action-btn" onclick="sharePost('${p.id}')" style="margin-left:auto;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </button>
+    </div>
+    <div class="feed-likes-count" id="fc-lc-${p.id}"><strong>${p.likes.length} me gusta</strong></div>
+    <div class="feed-caption-row"><strong>${p.author}</strong> ${p.caption}</div>
+    <div class="feed-tags">${(p.species||[]).map(x=>`<span class="tag fish">${x}</span>`).join('')}${(p.baits||[]).slice(0,1).map(x=>`<span class="tag bait">${x}</span>`).join('')}</div>
+    ${more}
+    <div class="feed-comments-section" id="fc-comm-${p.id}">${shownComments}</div>
+    <div class="feed-comment-input">
+      <div class="feed-av">${curAv}</div>
+      <input type="text" id="fc-inp-${p.id}" placeholder="Agregá un comentario..." onkeydown="if(event.key==='Enter')sendFeedComment('${p.id}')"/>
+      <button class="feed-comment-send" onclick="sendFeedComment('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    </div>
+  </div>`;
+}
+
+function toggleFeedLike(id){
+  if(!currentUser){showToast('Iniciá sesión para dar me gusta');return;}
+  const p=FEED.find(x=>x.id===id);if(!p)return;
+  const idx=p.likes.indexOf(currentUser.username);idx>=0?p.likes.splice(idx,1):p.likes.push(currentUser.username);
+  saveAll();
+  const myLike=p.likes.includes(currentUser.username);
+  const btn=document.getElementById('flike-'+id);
+  if(btn){btn.classList.toggle('liked',myLike);btn.querySelector('svg').setAttribute('fill',myLike?'currentColor':'none');}
+  const lc=document.getElementById('fc-lc-'+id);if(lc)lc.innerHTML=`<strong>${p.likes.length} me gusta</strong>`;
+}
+function sendFeedComment(id){
+  if(!currentUser){showToast('Iniciá sesión para comentar');return;}
+  const inp=document.getElementById('fc-inp-'+id);if(!inp)return;
+  const text=inp.value.trim();if(!text)return;
+  const p=FEED.find(x=>x.id===id);if(!p)return;
+  p.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:'Ahora mismo',createdAt:Date.now()});
+  saveAll();inp.value='';
+  const listEl=document.getElementById('fc-comm-'+id);
+  if(listEl){
+    const av=currentUser.photo?`<img src="${currentUser.photo}"/>`:currentUser.initials||'?';
+    const div=document.createElement('div');div.className='feed-comment-item';
+    div.innerHTML=`<div class="feed-comment-av">${av}</div><div><div class="feed-comment-text"><strong>${currentUser.name}</strong> ${text}</div><div class="feed-comment-time">Ahora mismo</div></div>`;
+    listEl.appendChild(div);
+  }
+}
+function expandFeedComments(id){
+  const p=FEED.find(x=>x.id===id);if(!p)return;
+  const listEl=document.getElementById('fc-comm-'+id);if(!listEl)return;
+  listEl.innerHTML=p.comments.map(c=>{
+    const av=c.authorPhoto?`<img src="${c.authorPhoto}"/>`:c.authorInitials||'?';
+    return `<div class="feed-comment-item"><div class="feed-comment-av">${av}</div><div><div class="feed-comment-text"><strong>${c.author}</strong> ${c.text}</div><div class="feed-comment-time">${c.time}</div></div></div>`;
+  }).join('');
+}
+
+// ===== CAROUSEL =====
+function carouselMove(id,dir){
+  const el=document.getElementById(id);if(!el)return;
+  let idx=parseInt(el.dataset.idx||0),total=parseInt(el.dataset.total||1);
+  idx=(idx+dir+total)%total;el.dataset.idx=idx;
+  const track=document.getElementById(id+'-track');if(track)track.style.transform=`translateX(-${idx*100}%)`;
+  el.querySelectorAll('.carousel-dot').forEach((d,i)=>d.classList.toggle('on',i===idx));
+  const cur=document.getElementById(id+'-cur');if(cur)cur.textContent=idx+1;
+}
+function initCarouselTouch(id){
+  const el=document.getElementById(id);if(!el||el._ti)return;el._ti=true;
+  let sx=0,moved=false;
+  el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;moved=false;},{passive:true});
+  el.addEventListener('touchmove',()=>{moved=true;},{passive:true});
+  el.addEventListener('touchend',e=>{if(!moved)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>40)carouselMove(id,dx<0?1:-1);},{passive:true});
+}
+// keyboard for photo detail overlay
+document.addEventListener('keydown',e=>{
+  const pdo=document.getElementById('pdo');
+  if(pdo&&pdo.classList.contains('open')){
+    if(e.key==='Escape')closePDO();
+    if(e.key==='ArrowRight')pdoNav(1);
+    if(e.key==='ArrowLeft')pdoNav(-1);
+  }
+});
+
+// ===== FAVORITES =====
+function renderFavorites(){
+  const favs=LS.load('favs_'+(currentUser?currentUser.username:''),[]);
+  const el=document.getElementById('favorites-list');
+  if(!favs.length){el.innerHTML=`<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;"><div style="font-size:36px;margin-bottom:10px;">❤️</div>Todavía no guardaste ningún lugar.</div>`;return;}
+  el.innerHTML=favs.map(id=>{const s=SPOTS.find(x=>x.id===id);if(!s)return'';
+    const th=s.spotPhotos&&s.spotPhotos[0]?`<img src="${s.spotPhotos[0].data}" style="width:100%;height:100%;object-fit:cover;">`:`${s.emoji}`;
+    return `<div class="spot-row" onclick="openSpot('${s.id}')"><div class="spot-icon-wrap">${th}</div><div class="spot-info"><div class="spot-name">${s.name}</div><div class="spot-meta">${s.loc}</div><div class="tags-row">${s.species.slice(0,2).map(x=>`<span class="tag fish">${x}</span>`).join('')}</div></div><span class="badge ${s.pub?'':'priv'}">${s.pub?'Público':'Privado'}</span></div>`;}).join('');
+}
+
+// ===== NOTIF =====
+function renderNotif(){
+  const el=document.getElementById('notif-list');if(!el)return;
+  const notifs=[{dot:true,text:'Bienvenido a PescaUY 🎣 ¡Subí tu primer lugar!',time:'al registrarte'},{dot:false,text:'Rodrigo Cazadores guardó un lugar como favorito.',time:'hace 2 horas'}];
+  el.innerHTML=notifs.map(n=>`<div class="notif-item"><div class="notif-dot ${n.dot?'':'read'}"></div><div><div style="font-size:13px;color:var(--tx);">${n.text}</div><div style="font-size:11px;color:var(--t2);margin-top:3px;">${n.time}</div></div></div>`).join('');
+}
+
+// ===== ADMIN =====
+function renderAdmin(){
+  const el=document.getElementById('admin-content');if(!el)return;
+  el.innerHTML=`<div class="admin-section"><div class="admin-section-title">⚙️ Panel Admin</div><div style="font-size:13px;color:var(--t2);">${SPOTS.length} lugares · ${FEED.length} posts · ${registeredUsers.length} usuarios</div></div>
+  <div class="sec-label">Lugares</div>
+  ${SPOTS.map(s=>`<div style="background:var(--bg);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">
+    <div style="font-size:18px;">${s.emoji}</div><div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</div><div style="font-size:10px;color:var(--t2);">${s.loc} · ${(s.spotPhotos||[]).length} fotos</div></div>
+    <button onclick="moveSpotAdmin('${s.id}')" style="background:var(--v);color:#fff;border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;cursor:pointer;">Mover</button>
+    <button onclick="deleteSpot('${s.id}');renderAdmin();" style="background:var(--danger);color:#fff;border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;cursor:pointer;">🗑</button>
+  </div>`).join('')}
+  <div class="sec-label" style="margin-top:16px;">Usuarios</div>
+  ${registeredUsers.map(u=>`<div style="background:var(--bg);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;">
+    <div style="width:30px;height:30px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;">${u.photo?`<img src="${u.photo}" style="width:100%;height:100%;object-fit:cover;">`:u.initials}</div>
+    <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${u.name}</div><div style="font-size:11px;color:var(--t2);">@${u.username} · ${u.role}</div></div>
+    <span class="badge ${u.role==='admin'?'admin-b':''}">${u.role}</span>
+    ${u.username!=='admin'?`<button onclick="deleteUser('${u.username}')" style="background:var(--danger);color:#fff;border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;cursor:pointer;">🗑</button>`:''}
+  </div>`).join('')}
+  <div style="height:20px;"></div>`;
+}
+function deleteUser(username){
+  if(username==='admin'){showToast('No podés eliminar al admin');return;}
+  if(!confirm(`¿Eliminar @${username}?`))return;
+  registeredUsers=registeredUsers.filter(u=>u.username!==username);
+  saveAll();showToast('Usuario eliminado');renderAdmin();
+}
+
+// ===== WEATHER =====
+function loadWeather(){
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=-34.9&longitude=-56.17&current=temperature_2m,wind_speed_10m,weathercode,relative_humidity_2m&wind_speed_unit=kmh&timezone=America/Montevideo')
+  .then(r=>r.json()).then(d=>{
+    const c=d.current,wc=c.weathercode;
+    const icon=wc===0?'☀️':wc<=3?'⛅':wc<=45?'🌫️':wc<=67?'🌧️':'⛈️';
+    const desc=wc===0?'Despejado':wc<=3?'Parcialmente nublado':wc<=45?'Neblina':wc<=67?'Lluvia':'Tormenta';
+    const temp=Math.round(c.temperature_2m),wind=Math.round(c.wind_speed_10m),hum=Math.round(c.relative_humidity_2m);
+    document.getElementById('w-icon-sm').textContent=icon;
+    document.getElementById('w-text-sm').textContent=`${temp}°C · ${wind}km/h`;
+    const good=wind<20&&wc<=3,ok=wind<35&&wc<=45,sc=good?'good':ok?'ok':'bad';
+    document.getElementById('weather-content').innerHTML=`
+      <div class="w-hero"><div class="w-main"><div style="font-size:42px;">${icon}</div><div><div class="w-temp">${temp}°C</div><div class="w-desc">${desc} · Montevideo</div></div></div>
+      <div class="w-stats"><div class="wstat"><div class="wstat-val">${wind} km/h</div><div class="wstat-lbl">Viento</div></div><div class="wstat"><div class="wstat-val">${hum}%</div><div class="wstat-lbl">Humedad</div></div><div class="wstat"><div class="wstat-val">${wc<=3?'Buena':'Regular'}</div><div class="wstat-lbl">Visibilidad</div></div></div></div>
+      <div class="pesca-score ${sc}"><div class="ps-icon">${good?'🎣':ok?'⚠️':'🚫'}</div><div><div class="ps-title">${good?'Excelente para pescar':ok?'Condiciones aceptables':'No recomendado hoy'}</div></div></div>
+      <div class="sec-label">Consejos</div>
+      <div class="tip-item"><strong>Viento:</strong> ${wind<20?'Suave — ideal para mosca y spinning.':wind<35?'Moderado — preferí zonas protegidas.':'Fuerte — solo orilla resguardada.'}</div>
+      <div class="tip-item"><strong>Cielo:</strong> ${wc<=3?'Despejado — mejor al amanecer y atardecer.':'Nublado — peces activos todo el día.'}</div>
+      <div class="tip-item"><strong>Temperatura ${temp}°C:</strong> ${temp<15?'Agua fría — carnada cerca del fondo.':temp<25?'Temperatura ideal.':'Calor — mejor al amanecer.'}</div>`;
+  }).catch(()=>{document.getElementById('w-icon-sm').textContent='—';document.getElementById('w-text-sm').textContent='Sin datos';});
+}
+
+// ===== FORM HELPERS =====
+function tChip(el){el.classList.toggle('on');}
+function tSingle(el){el.closest('.chips-wrap').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+
+
+
+// ===== SUPABASE =====
+</script>
+</body>
+</html>
