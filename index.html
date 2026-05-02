@@ -645,6 +645,13 @@ function doLogout(){
 (async function(){
   // show loading screen while checking session
   const loadEl=document.getElementById('loading-screen');
+  // safety timeout - if stuck for 5 seconds, go to login
+  const safetyTimer=setTimeout(()=>{
+    if(loadEl&&loadEl.style.display!=='none'){
+      loadEl.style.display='none';
+      go('login');
+    }
+  },5000);
   const saved=LS.load('session',null);
   const savedUser=LS.load('sessionUser',null);
   if(saved&&savedUser){
@@ -665,7 +672,7 @@ function doLogout(){
       const idx=registeredUsers.findIndex(u=>u.username===saved);
       if(idx>=0)registeredUsers[idx]={...registeredUsers[idx],...serverUser};
       else registeredUsers.push(serverUser);
-      if(loadEl)loadEl.style.display='none';
+      clearTimeout(safetyTimer);if(loadEl)loadEl.style.display='none';
       afterLogin();
     }catch(e){
       // network error - use cache
@@ -673,12 +680,12 @@ function doLogout(){
       const idx=registeredUsers.findIndex(u=>u.username===saved);
       if(idx>=0)registeredUsers[idx]={...registeredUsers[idx],...savedUser};
       else registeredUsers.push(savedUser);
-      if(loadEl)loadEl.style.display='none';
+      clearTimeout(safetyTimer);if(loadEl)loadEl.style.display='none';
       afterLogin();
     }
     return;
   }
-  if(loadEl)loadEl.style.display='none';
+  clearTimeout(safetyTimer);if(loadEl)loadEl.style.display='none';
   go('login');
 })();
 
