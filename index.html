@@ -213,7 +213,8 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 .map-picker-screen{position:absolute;inset:0;z-index:9999;display:none;flex-direction:column;}
 .map-picker-screen.open{display:flex;}
 #map-picker-leaflet{flex:1;}
-.map-picker-crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-70%);z-index:10000;pointer-events:none;font-size:36px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4));}
+.map-picker-crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-85%);z-index:10000;pointer-events:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));animation:buoyBob 2s ease-in-out infinite;}
+@keyframes buoyBob{0%,100%{transform:translate(-50%,-85%) rotate(-3deg);}50%{transform:translate(-50%,-80%) rotate(3deg);}}
 .map-picker-bar{background:var(--sf);border-top:1px solid var(--br);padding:12px 16px;display:flex;gap:10px;flex-shrink:0;}
 .map-picker-bar button{flex:1;padding:12px;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;}
 .mpcancel{background:var(--bg);color:var(--tx);border:1px solid var(--br)!important;}
@@ -339,7 +340,24 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 <!-- MAP PICKER -->
 <div class="map-picker-screen" id="map-picker-screen">
   <div class="map-picker-info">📍 Mové el mapa hasta el punto exacto</div>
-  <div class="map-picker-crosshair">📍</div>
+  <div class="map-picker-crosshair" id="buoy-marker">
+  <svg width="52" height="64" viewBox="0 0 52 64" xmlns="http://www.w3.org/2000/svg">
+    <!-- Gancho superior -->
+    <rect x="21" y="0" width="10" height="7" rx="3" fill="#1a1a1a"/>
+    <path d="M24 4 Q26 1 28 4" fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Cuerpo boya -->
+    <ellipse cx="26" cy="36" rx="22" ry="24" fill="white" stroke="#222" stroke-width="2"/>
+    <!-- Mitad roja (diagonal) -->
+    <clipPath id="cp"><ellipse cx="26" cy="36" rx="22" ry="24"/></clipPath>
+    <polygon points="4,36 48,24 48,60 4,60" fill="#cc1111" clip-path="url(#cp)"/>
+    <!-- Línea divisoria -->
+    <line x1="4" y1="36" x2="48" y2="24" stroke="#222" stroke-width="2"/>
+    <!-- Brillo -->
+    <ellipse cx="18" cy="26" rx="7" ry="5" fill="white" opacity="0.3" transform="rotate(-20 18 26)"/>
+    <!-- Punta inferior -->
+    <ellipse cx="26" cy="59" rx="5" ry="3" fill="#cc1111" stroke="#222" stroke-width="1.5"/>
+  </svg>
+</div>
   <div id="map-picker-leaflet"></div>
   <div class="map-picker-bar">
     <button class="mpcancel" onclick="closeMapPicker(false)">Cancelar</button>
@@ -467,16 +485,10 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
     </div>
     <div class="form-group">
       <label class="form-label">Ubicación exacta en el mapa</label>
-      <div style="display:flex;gap:8px;margin-bottom:6px;">
-        <button class="location-picker-btn" style="flex:1;" onclick="autoLocate()" id="auto-loc-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
-          Mi ubicación actual
-        </button>
-        <button class="location-picker-btn" style="flex:1;" onclick="openMapPicker()" id="loc-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          Elegir en mapa
-        </button>
-      </div>
+      <button class="location-picker-btn" onclick="openMapPickerGPS()" id="loc-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Seleccionar ubicación
+      </button>
       <div class="location-set" id="loc-set" style="display:none;"></div>
     </div>
     <div class="form-group"><label class="form-label">Tipo de pesca</label><div class="chips-wrap" id="chips-tipo"><div class="chip on" onclick="tChip(this)">Orilla</div><div class="chip" onclick="tChip(this)">Embarcado</div><div class="chip" onclick="tChip(this)">Mosca</div><div class="chip" onclick="tChip(this)">Spinning</div><div class="chip" onclick="tChip(this)">Costa/Mar</div></div></div>
@@ -716,6 +728,7 @@ async function silentSync(){
       LS.save('feed',FEED);
       if(document.getElementById('s-feed').classList.contains('active'))renderFeed();
     }
+    updateNotifBadge();
   }catch(e){console.warn('silentSync',e);}
 }
 
@@ -998,9 +1011,23 @@ function afterLogin(){
 }
 
 function updateNotifBadge(){
-  // show badge if there are notifications (simplified - always show for now)
   const badge=document.getElementById('notif-badge');
-  if(badge)badge.style.display='block';
+  if(!badge||!currentUser)return;
+  const lastRead=LS.load('notifRead',0);
+  // check if there are new comments on my spots since last read
+  let hasNew=false;
+  const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
+  FEED.forEach(fp=>{
+    if(mySpotIds.includes(fp.spotId)&&fp.comments){
+      fp.comments.forEach(c=>{
+        if(c.author!==currentUser.name&&(c.createdAt||0)>lastRead)hasNew=true;
+      });
+    }
+  });
+  // check new spots
+  const lastCleared=LS.load('notifCleared',0);
+  if(SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).length>0)hasNew=true;
+  badge.style.display=hasNew?'block':'none';
 }
 function updateProfileUI(){
   if(!currentUser)return;
@@ -1268,6 +1295,28 @@ function openAddPhotosToSpot(spotId){
 
 // ===== MAP PICKER =====
 function openMapPicker(){openMapPickerFn(null,null,null);}
+function openMapPickerGPS(){
+  // open map first
+  openMapPickerFn(null,null,null);
+  // then try to center on GPS
+  if(navigator.geolocation){
+    const btn=document.getElementById('loc-btn');
+    if(btn)btn.textContent='Obteniendo GPS...';
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        if(pickerMap){
+          pickerMap.setView([pos.coords.latitude, pos.coords.longitude], 14);
+        }
+        if(btn)btn.textContent='Seleccionar ubicacion';
+      },
+      ()=>{
+        // GPS failed - stays at default Uruguay view
+        if(btn)btn.textContent='Seleccionar ubicacion';
+      },
+      {enableHighAccuracy:true, timeout:8000}
+    );
+  }
+}
 function openMapPickerFn(lat,lng,cb){
   pickerCb=cb||null;
   document.getElementById('map-picker-screen').classList.add('open');
@@ -1288,6 +1337,21 @@ function closeMapPicker(confirm){
 }
 
 // ===== PUBLISH SPOT =====
+
+function compressImage(dataUrl, maxW, quality, cb){
+  if(!dataUrl||dataUrl.startsWith('data:video')){cb(dataUrl);return;}
+  const img=new Image();
+  img.onload=function(){
+    const canvas=document.createElement('canvas');
+    let w=img.width,h=img.height;
+    if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+    canvas.width=w;canvas.height=h;
+    canvas.getContext('2d').drawImage(img,0,0,w,h);
+    cb(canvas.toDataURL('image/jpeg',quality));
+  };
+  img.src=dataUrl;
+}
+
 function addNewSpotPhotos(input, mediaType){
   if(!input.files||!input.files.length)return;
   const photos=newSpotMedia.filter(m=>m.type==='photo').length;
@@ -1564,8 +1628,45 @@ function renderFavorites(){
 // ===== NOTIF =====
 function renderNotif(){
   const el=document.getElementById('notif-list');if(!el)return;
-  const notifs=[{dot:true,text:'Bienvenido a PescaUY 🎣 ¡Subí tu primer lugar!',time:'al registrarte'},{dot:false,text:'Rodrigo Cazadores guardó un lugar como favorito.',time:'hace 2 horas'}];
-  el.innerHTML=notifs.map(n=>`<div class="notif-item"><div class="notif-dot ${n.dot?'':'read'}"></div><div><div style="font-size:13px;color:var(--tx);">${n.text}</div><div style="font-size:11px;color:var(--t2);margin-top:3px;">${n.time}</div></div></div>`).join('');
+  LS.save('notifRead',Date.now());
+  const badge=document.getElementById('notif-badge');
+  if(badge)badge.style.display='none';
+  const notifs=[];
+  notifs.push({dot:false,text:'Bienvenido a PescaUY! Subi tu primer lugar.',time:'al registrarte'});
+  if(currentUser){
+    const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
+    FEED.forEach(fp=>{
+      if(mySpotIds.includes(fp.spotId)&&fp.comments){
+        fp.comments.forEach(c=>{
+          if(c.author!==currentUser.name){
+            notifs.push({dot:true,text:'Comentario de '+c.author+' en '+fp.loc+': "'+c.text.substring(0,40)+'"',time:c.time||''});
+          }
+        });
+      }
+    });
+    const lastCleared=LS.load('notifCleared',0);
+    SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).slice(0,3).forEach(s=>{
+      notifs.push({dot:false,text:'Nuevo lugar publicado: '+s.name,time:s.createdAt?fmtDate(s.createdAt):''});
+    });
+  }
+  if(!notifs.length){
+    el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;">No tenes notificaciones por ahora.</div>';
+    return;
+  }
+  let html='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--br);">';
+  html+='<span style="font-size:12px;color:var(--t2);">'+notifs.length+' notificaciones</span>';
+  html+='<button onclick="clearNotifs()" style="font-size:12px;color:var(--danger);background:none;border:none;cursor:pointer;font-weight:500;">Limpiar todo</button></div>';
+  notifs.forEach(function(n){
+    html+='<div class="notif-item"><div class="notif-dot '+(n.dot?'':'read')+'"></div>';
+    html+='<div><div style="font-size:13px;color:var(--tx);">'+n.text+'</div>';
+    html+='<div style="font-size:11px;color:var(--t2);margin-top:3px;">'+n.time+'</div></div></div>';
+  });
+  el.innerHTML=html;
+}
+function clearNotifs(){
+  LS.save('notifCleared', Date.now());
+  renderNotif();
+  showToast('Notificaciones limpiadas');
 }
 
 // ===== ADMIN =====
@@ -1618,25 +1719,65 @@ function loadWeather(){
 
 // ===== FORM HELPERS =====
 
-function autoLocate(){
-  if(!navigator.geolocation){showToast('Tu dispositivo no soporta geolocalización');return;}
-  const btn=document.getElementById('auto-loc-btn');
-  if(btn)btn.textContent='Obteniendo ubicación...';
-  navigator.geolocation.getCurrentPosition(
-    pos=>{
-      newSpotLat=Math.round(pos.coords.latitude*10000)/10000;
-      newSpotLng=Math.round(pos.coords.longitude*10000)/10000;
-      const locSet=document.getElementById('loc-set');
-      if(locSet){locSet.style.display='block';locSet.textContent='✅ Ubicación obtenida: '+newSpotLat+', '+newSpotLng;}
-      if(btn)btn.textContent='✅ Ubicación obtenida';
-      showToast('📍 Ubicación capturada correctamente');
-    },
-    err=>{
-      if(btn)btn.textContent='Mi ubicación actual';
-      showToast('No se pudo obtener la ubicación. Usá el mapa.');
-    },
-    {enableHighAccuracy:true,timeout:10000}
-  );
+
+// ===== SHARE =====
+function sharePost(postId){
+  const p=FEED.find(x=>x.id===postId);
+  const url=window.location.origin+'/?post='+postId;
+  const text=p?('Mira esta publicacion en PescaUY: '+p.loc+(p.caption?' - '+p.caption.substring(0,60):'')):'Mira esta publicacion en PescaUY';
+  showShareSheet(url,text);
+}
+function shareSpot(spotId){
+  const s=SPOTS.find(x=>x.id===spotId);
+  const url=window.location.origin+'/?spot='+spotId;
+  const text=s?('Lugar de pesca en PescaUY: '+s.name+' - '+s.loc):'Lugar de pesca en PescaUY';
+  showShareSheet(url,text);
+}
+function showShareSheet(url,text){
+  const old=document.getElementById('share-sheet');if(old)old.remove();
+  const eu=encodeURIComponent(url);
+  const et=encodeURIComponent(text+' '+url);
+  const sheet=document.createElement('div');
+  sheet.id='share-sheet';
+  sheet.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.5);';
+  sheet.innerHTML=`<div style="background:var(--sf);border-radius:20px 20px 0 0;padding:20px 16px 32px;">
+    <div style="text-align:center;font-size:14px;font-weight:600;color:var(--tx);margin-bottom:16px;">Compartir</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;">
+      <div onclick="window.open('https://wa.me/?text=${et}','_blank');document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+        <div style="width:50px;height:50px;border-radius:14px;background:#25D366;display:flex;align-items:center;justify-content:center;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.561 4.14 1.535 5.875L.057 23.18a.75.75 0 0 0 .916.919l5.453-1.43A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.969 0-3.82-.538-5.408-1.472l-.386-.232-4.007 1.051 1.07-3.904-.253-.403A9.956 9.956 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        </div>
+        <span style="font-size:10px;color:var(--t2);">WhatsApp</span>
+      </div>
+      <div onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=${eu}','_blank');document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+        <div style="width:50px;height:50px;border-radius:14px;background:#1877F2;display:flex;align-items:center;justify-content:center;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </div>
+        <span style="font-size:10px;color:var(--t2);">Facebook</span>
+      </div>
+      <div onclick="window.open('https://twitter.com/intent/tweet?text=${et}','_blank');document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+        <div style="width:50px;height:50px;border-radius:14px;background:#000;display:flex;align-items:center;justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </div>
+        <span style="font-size:10px;color:var(--t2);">X</span>
+      </div>
+      <div onclick="window.open('https://www.instagram.com/','_blank');document.getElementById('share-sheet').remove();showToast('Copia el enlace y pegalo en Instagram');" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+        <div style="width:50px;height:50px;border-radius:14px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+        </div>
+        <span style="font-size:10px;color:var(--t2);">Instagram</span>
+      </div>
+      <div onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('Enlace copiado!')).catch(()=>{});document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+        <div style="width:50px;height:50px;border-radius:14px;background:var(--bg);border:1.5px solid var(--br);display:flex;align-items:center;justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--tx)" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </div>
+        <span style="font-size:10px;color:var(--t2);">Copiar</span>
+      </div>
+    </div>
+    <button onclick="document.getElementById('share-sheet').remove();" style="width:100%;padding:13px;border-radius:var(--rl);border:1.5px solid var(--br);background:var(--bg);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+  </div>`;
+  sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.remove();});
+  document.getElementById('app').appendChild(sheet);
 }
 
 function tOther(el, wrapId){
