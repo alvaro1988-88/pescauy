@@ -14,6 +14,13 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>PescaUY – Lugares de pesca en Uruguay</title>
+<link rel="manifest" href="/manifest.json"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="PescaUY"/>
+<meta name="theme-color" content="#1D9E75"/>
+<link rel="apple-touch-icon" href="/icon-192.png"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
 <style>
@@ -1737,6 +1744,39 @@ function fmtDate(ts){
     afterLogin();
   }
 })();
+
+// ===== PWA SERVICE WORKER =====
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  });
+}
+
+// ===== PWA INSTALL PROMPT =====
+let _pwaPrompt=null;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  _pwaPrompt=e;
+  // show install banner after 30 seconds if not installed
+  setTimeout(()=>{
+    if(_pwaPrompt&&currentUser){
+      const banner=document.createElement('div');
+      banner.id='pwa-banner';
+      banner.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--v);color:#fff;padding:12px 16px;border-radius:var(--rl);font-size:13px;font-weight:600;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(29,158,117,.4);white-space:nowrap;';
+      banner.innerHTML='<span>📲 Instalá PescaUY como app</span><button onclick="installPWA()" style="background:#fff;color:var(--v);border:none;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">Instalar</button><button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,.3);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;">✕</button>';
+      document.getElementById('app').appendChild(banner);
+      setTimeout(()=>{const b=document.getElementById('pwa-banner');if(b)b.remove();},15000);
+    }
+  },30000);
+});
+function installPWA(){
+  if(!_pwaPrompt)return;
+  _pwaPrompt.prompt();
+  _pwaPrompt.userChoice.then(()=>{
+    _pwaPrompt=null;
+    const b=document.getElementById('pwa-banner');if(b)b.remove();
+  });
+}
 </script>
 </body>
 </html>
