@@ -266,6 +266,11 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 .admin-section{background:#E6F1FB;border-radius:var(--r);padding:12px;margin-bottom:14px;border:1px solid rgba(55,138,221,.3);}
 .admin-section-title{font-size:11px;font-weight:700;color:#0C447C;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
 /* TOAST */
+.spinner-overlay{position:absolute;inset:0;z-index:9000;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;}
+.spinner-overlay.show{display:flex;}
+.spinner{width:36px;height:36px;border:3px solid var(--vl);border-top-color:var(--v);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinner-overlay p{font-size:13px;color:var(--t2);font-weight:500;}
 .toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:var(--tx);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:500;z-index:99999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
 .toast.show{opacity:1;}
 .loading-screen{position:absolute;inset:0;z-index:99998;background:var(--sf);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
@@ -285,6 +290,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 <body>
 <div class="app" id="app">
 <div class="toast" id="toast"></div>
+<div class="spinner-overlay" id="spinner"><div class="spinner"></div><p>Cargando...</p></div>
 
 <!-- IMG VIEWER -->
 <div class="img-viewer" id="img-viewer">
@@ -375,7 +381,13 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
   <div class="topbar">
     <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M3 18c3-4 6-6 9-6s6 2 9 6"/><circle cx="12" cy="7" r="3"/></svg></div>
     <div class="ttitle">Pesca<span>UY</span></div>
+    <div style="position:relative;display:flex;gap:8px;align-items:center;">
+    <div style="position:relative;cursor:pointer;" onclick="go('notif')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:1.5px solid #fff;"></div>
+    </div>
     <div class="avatar-btn" id="top-avatar" onclick="go('profile')"></div>
+  </div>
   </div>
   <div class="map-wrap">
     <div id="map"></div>
@@ -393,7 +405,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
     <button class="fab" onclick="go('add')"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     <button class="admin-fab" id="admin-fab" onclick="go('admin')"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></button>
   </div>
-  <div class="bottom-sheet" id="bottom-sheet"></div>
+  <div class="bottom-sheet" id="bottom-sheet" style="display:none;"></div>
   <nav class="navbar">
     <div class="nav-item active" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="3,11 12,2 21,11"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>Mapa</span></div>
     <div class="nav-item" onclick="go('feed')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><span>Feed</span></div>
@@ -448,15 +460,23 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
     </div>
     <div class="form-group">
       <label class="form-label">Ubicación exacta en el mapa</label>
-      <button class="location-picker-btn" onclick="openMapPicker()" id="loc-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        Seleccionar punto en el mapa
-      </button>
+      <div style="display:flex;gap:8px;margin-bottom:6px;">
+        <button class="location-picker-btn" style="flex:1;" onclick="autoLocate()" id="auto-loc-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+          Mi ubicación actual
+        </button>
+        <button class="location-picker-btn" style="flex:1;" onclick="openMapPicker()" id="loc-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Elegir en mapa
+        </button>
+      </div>
       <div class="location-set" id="loc-set" style="display:none;"></div>
     </div>
     <div class="form-group"><label class="form-label">Tipo de pesca</label><div class="chips-wrap" id="chips-tipo"><div class="chip on" onclick="tChip(this)">Orilla</div><div class="chip" onclick="tChip(this)">Embarcado</div><div class="chip" onclick="tChip(this)">Mosca</div><div class="chip" onclick="tChip(this)">Spinning</div><div class="chip" onclick="tChip(this)">Costa/Mar</div></div></div>
-    <div class="form-group"><label class="form-label">Especies</label><div class="chips-wrap" id="chips-species"><div class="chip" onclick="tChip(this)">Dorado</div><div class="chip" onclick="tChip(this)">Boga</div><div class="chip" onclick="tChip(this)">Tararira</div><div class="chip" onclick="tChip(this)">Pejerrey</div><div class="chip" onclick="tChip(this)">Surubí</div><div class="chip" onclick="tChip(this)">Bagre</div><div class="chip" onclick="tChip(this)">Corvina</div><div class="chip" onclick="tChip(this)">Lenguado</div><div class="chip" onclick="tChip(this)">Brótola</div><div class="chip" onclick="tChip(this)">Pescadilla</div></div></div>
-    <div class="form-group"><label class="form-label">Carnada</label><div class="chips-wrap" id="chips-bait"><div class="chip" onclick="tChip(this)">Lombriz</div><div class="chip" onclick="tChip(this)">Pejerrey vivo</div><div class="chip" onclick="tChip(this)">Pan de maíz</div><div class="chip" onclick="tChip(this)">Señuelo</div><div class="chip" onclick="tChip(this)">Carne</div><div class="chip" onclick="tChip(this)">Mosca artificial</div><div class="chip" onclick="tChip(this)">Mejillón</div><div class="chip" onclick="tChip(this)">Calamar</div></div></div>
+    <div class="form-group"><label class="form-label">Especies</label><div class="chips-wrap" id="chips-species"><div class="chip" onclick="tChip(this)">Dorado</div><div class="chip" onclick="tChip(this)">Boga</div><div class="chip" onclick="tChip(this)">Tararira</div><div class="chip" onclick="tChip(this)">Pejerrey</div><div class="chip" onclick="tChip(this)">Surubí</div><div class="chip" onclick="tChip(this)">Bagre</div><div class="chip" onclick="tChip(this)">Corvina</div><div class="chip" onclick="tChip(this)">Lenguado</div><div class="chip" onclick="tChip(this)">Brótola</div><div class="chip" onclick="tChip(this)">Pescadilla</div><div class="chip" onclick="tOther(this,'species-other-wrap')">Otros</div></div>
+    <div id="species-other-wrap" style="display:none;margin-top:6px;"><input class="form-input" id="species-other-input" type="text" placeholder="Escribí la especie..." style="font-size:13px;padding:8px 12px;"/></div></div>
+    <div class="form-group"><label class="form-label">Carnada</label><div class="chips-wrap" id="chips-bait"><div class="chip" onclick="tChip(this)">Lombriz</div><div class="chip" onclick="tChip(this)">Carnada viva</div><div class="chip" onclick="tChip(this)">Masa</div><div class="chip" onclick="tChip(this)">Señuelo</div><div class="chip" onclick="tChip(this)">Carne</div><div class="chip" onclick="tChip(this)">Mosca artificial</div><div class="chip" onclick="tChip(this)">Mejillón</div><div class="chip" onclick="tChip(this)">Otro</div></div>
+    <div id="bait-other-wrap" style="display:none;margin-top:6px;"><input class="form-input" id="bait-other-input" type="text" placeholder="Escribí la carnada..." style="font-size:13px;padding:8px 12px;"/></div></div>
     <div class="form-group"><label class="form-label">Tu calificación</label><div class="star-rate" id="add-stars"><span class="rate-star" onclick="setAddStar(1)">★</span><span class="rate-star" onclick="setAddStar(2)">★</span><span class="rate-star" onclick="setAddStar(3)">★</span><span class="rate-star" onclick="setAddStar(4)">★</span><span class="rate-star" onclick="setAddStar(5)">★</span></div></div>
     <div class="form-group"><label class="form-label">Acceso</label><div class="chips-wrap" id="chips-access"><div class="chip on" onclick="tSingle(this)">Público</div><div class="chip" onclick="tSingle(this)">Privado</div><div class="chip" onclick="tSingle(this)">Con permiso</div></div></div>
     <div class="form-group"><label class="form-label">Descripción</label><textarea class="form-input" id="add-comment" rows="3" placeholder="Contá qué tal está el lugar, mejor hora, condición del agua..."></textarea></div>
@@ -479,7 +499,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
       <div class="prof-bio" id="prof-bio-display"></div>
     </div>
     <div class="stats-row">
-      <div class="stat-cell"><div class="stat-num" id="stat-lugares">0</div><div class="stat-lbl">Lugares</div></div>
+      <div class="stat-cell" onclick="go('myspots')" style="cursor:pointer;"><div class="stat-num" id="stat-lugares">0</div><div class="stat-lbl">Lugares ›</div></div>
       <div class="stat-cell"><div class="stat-num" id="stat-fotos">0</div><div class="stat-lbl">Fotos</div></div>
       <div class="stat-cell"><div class="stat-num">⭐4.7</div><div class="stat-lbl">Reputación</div></div>
     </div>
@@ -544,6 +564,12 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
     <div style="background:var(--bg);border-radius:var(--r);padding:12px;margin-top:4px;font-size:12px;color:var(--t2);line-height:1.6;">📌 Si tenés dudas o querés reportar algo, contactá al equipo de soporte desde tu perfil.</div>
     <div style="height:20px;"></div>
   </div>
+</div>
+
+<!-- MIS LUGARES -->
+<div class="screen" id="s-myspots">
+  <div class="topbar"><button class="back-btn" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Mis publicaciones</div></div>
+  <div class="subscreen" id="myspots-list" style="padding:0;"></div>
 </div>
 <!-- ADMIN -->
 <div class="screen" id="s-admin"><div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle" style="color:#BA7517;">Panel Admin ⚙️</div></div><div class="form-wrap" id="admin-content"></div></div>
@@ -639,120 +665,52 @@ async function syncDB(){
 async function silentSync(){
   try{
     const sr=await sGet('spots','order=created_at.asc');
-    let changed=false;
+    let sc=false;
     (sr||[]).forEach(r=>{
-      const s=r.data;if(!s.spotPhotos)s.spotPhotos=[];if(!s.ratings)s.ratings={};
-      if(!SPOTS.find(x=>x.id===s.id)){SPOTS.push(s);changed=true;}
+      const s=r.data;
+      if(!s.spotPhotos)s.spotPhotos=[];if(!s.ratings)s.ratings={};
+      const idx=SPOTS.findIndex(x=>x.id===s.id);
+      if(idx<0){SPOTS.push(s);sc=true;}
+      else{
+        const loc=SPOTS[idx];
+        s.spotPhotos=s.spotPhotos.map(sp=>{
+          const lp=(loc.spotPhotos||[]).find(x=>x.id===sp.id);
+          if(!lp)return sp;
+          return{...sp,
+            likes:sp.likes.length>=lp.likes.length?sp.likes:lp.likes,
+            comments:sp.comments.length>=lp.comments.length?sp.comments:lp.comments};
+        });
+        SPOTS[idx]={...s};sc=true;
+      }
     });
-    if(changed){LS.save('spots',SPOTS);renderMarkers(activeFilter);renderSheet(activeFilter);}
-
+    if(sc){LS.save('spots',SPOTS);renderMarkers(activeFilter);renderSheet(activeFilter);}
     const fr=await sGet('feed','order=created_at.desc');
-    const localFeed=LS.load('feed',[]);
-    let fchanged=false;
+    const lf=LS.load('feed',[]);
+    let fc=false;
     (fr||[]).forEach(r=>{
-      const s=r.data;if(!s.likes)s.likes=[];if(!s.comments)s.comments=[];if(!s.photos)s.photos=[];
+      const s=r.data;
+      if(!s.likes)s.likes=[];if(!s.comments)s.comments=[];if(!s.photos)s.photos=[];
       const idx=FEED.findIndex(x=>x.id===s.id);
       if(idx<0){
-        const lp=localFeed.find(x=>x.id===s.id);
+        const lp=lf.find(x=>x.id===s.id);
         if(lp&&lp.photos&&lp.photos.length)s.photos=lp.photos;
-        FEED.push(s);fchanged=true;
+        FEED.push(s);fc=true;
+      } else {
+        const loc=FEED[idx];
+        FEED[idx]={...s,
+          photos:s.photos.length?s.photos:(loc.photos||[]),
+          likes:s.likes.length>=loc.likes.length?s.likes:loc.likes,
+          comments:s.comments.length>=loc.comments.length?s.comments:loc.comments};
+        fc=true;
       }
-      // NEVER overwrite existing feed items during silent sync
     });
-    if(fchanged){
+    if(fc){
       FEED.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
       LS.save('feed',FEED);
       if(document.getElementById('s-feed').classList.contains('active'))renderFeed();
     }
   }catch(e){console.warn('silentSync',e);}
 }
-
-
-// ===== SHARE =====
-function sharePost(postId){
-  const p=FEED.find(x=>x.id===postId);
-  const url=window.location.href.split('?')[0]+'?post='+postId;
-  const text=p?`🎣 ${p.author} en ${p.loc}: ${p.caption||''} - PescaUY`:'🎣 Mirá esta publicación en PescaUY';
-  showShareSheet(url, text);
-}
-function shareSpot(spotId){
-  const s=SPOTS.find(x=>x.id===spotId);
-  const url=window.location.href.split('?')[0]+'?spot='+spotId;
-  const text=s?`🎣 ${s.name} - ${s.loc} | PescaUY`:'🎣 Mirá este lugar de pesca en PescaUY';
-  showShareSheet(url, text);
-}
-function showShareSheet(url, text){
-  // remove existing
-  const old=document.getElementById('share-sheet');if(old)old.remove();
-  const encoded=encodeURIComponent(url);
-  const etxt=encodeURIComponent(text);
-  const sheet=document.createElement('div');
-  sheet.id='share-sheet';
-  sheet.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.5);';
-  sheet.innerHTML=`
-    <div style="background:var(--sf);border-radius:20px 20px 0 0;padding:20px 16px 32px;">
-      <div style="text-align:center;font-size:14px;font-weight:600;color:var(--tx);margin-bottom:16px;">Compartir</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;">
-        <div onclick="window.open('https://wa.me/?text=${etxt}%20${encoded}','_blank');document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
-          <div style="width:50px;height:50px;border-radius:14px;background:#25D366;display:flex;align-items:center;justify-content:center;">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.561 4.14 1.535 5.875L.057 23.18a.75.75 0 0 0 .916.919l5.453-1.43A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.969 0-3.82-.538-5.408-1.472l-.386-.232-4.007 1.051 1.07-3.904-.253-.403A9.956 9.956 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-          </div>
-          <span style="font-size:10px;color:var(--t2);">WhatsApp</span>
-        </div>
-        <div onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=${encoded}','_blank');document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
-          <div style="width:50px;height:50px;border-radius:14px;background:#1877F2;display:flex;align-items:center;justify-content:center;">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-          </div>
-          <span style="font-size:10px;color:var(--t2);">Facebook</span>
-        </div>
-        <div onclick="window.open('https://twitter.com/intent/tweet?text=${etxt}&url=${encoded}','_blank');document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
-          <div style="width:50px;height:50px;border-radius:14px;background:#000;display:flex;align-items:center;justify-content:center;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </div>
-          <span style="font-size:10px;color:var(--t2);">X</span>
-        </div>
-        <div onclick="window.open('https://www.instagram.com/','_blank');document.getElementById('share-sheet').remove();showToast('Copiá el enlace y pegalo en Instagram');" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
-          <div style="width:50px;height:50px;border-radius:14px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-          </div>
-          <span style="font-size:10px;color:var(--t2);">Instagram</span>
-        </div>
-        <div onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('¡Enlace copiado! 📋')).catch(()=>showToast('${url}'));document.getElementById('share-sheet').remove();" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
-          <div style="width:50px;height:50px;border-radius:14px;background:var(--bg);border:1.5px solid var(--br);display:flex;align-items:center;justify-content:center;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--tx)" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          </div>
-          <span style="font-size:10px;color:var(--t2);">Copiar</span>
-        </div>
-      </div>
-      <button onclick="document.getElementById('share-sheet').remove();" style="width:100%;padding:13px;border-radius:var(--rl);border:1.5px solid var(--br);background:var(--bg);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
-    </div>`;
-  sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.remove();});
-  document.getElementById('app').appendChild(sheet);
-}
-
-
-// ===== IMAGE COMPRESSION (reduces size for mobile uploads) =====
-function compressImage(dataUrl, maxW, quality, cb){
-  if(dataUrl.startsWith('data:video')){cb(dataUrl);return;}
-  const img=new Image();
-  img.onload=function(){
-    const canvas=document.createElement('canvas');
-    let w=img.width,h=img.height;
-    if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
-    canvas.width=w;canvas.height=h;
-    const ctx=canvas.getContext('2d');
-    ctx.drawImage(img,0,0,w,h);
-    cb(canvas.toDataURL('image/jpeg',quality));
-  };
-  img.src=dataUrl;
-}
-
-
-
-// ===== STORAGE - server-backed with localStorage fallback =====
-// Detect server URL from current page
-const SERVER = window.location.origin;
-let _serverAvailable = null;
 
 async function _noServer() {
   if(_serverAvailable !== null) return _serverAvailable;
@@ -810,11 +768,16 @@ function go(s){
   document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
   document.getElementById('s-'+s).classList.add('active');
   if(s==='map')setTimeout(()=>{if(map)map.invalidateSize();},120);
-  if(s==='feed'){silentSync().then(()=>renderFeed()).catch(()=>renderFeed());}
+  if(s==='feed'){
+    showSpinner();
+    silentSync().then(()=>{renderFeed();hideSpinner();}).catch(()=>{renderFeed();hideSpinner();});
+  }
   if(s==='favorites')renderFavorites();
   if(s==='notif')renderNotif();
   if(s==='admin')renderAdmin();
   if(s==='profile')updateProfileUI();
+  if(s==='myspots')renderMySpots();
+  if(s!=='login')LS.save('lastScreen',s);
 }
 
 // ===== IMG VIEWER =====
@@ -917,7 +880,7 @@ function sendPhotoComment(){
   const text=inp.value.trim();if(!text)return;
   const photo=getPDOPhoto();if(!photo)return;
   if(!photo.comments)photo.comments=[];
-  photo.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:'Ahora mismo',createdAt:Date.now()});
+  photo.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:fmtDate(Date.now()),createdAt:Date.now()});
   LS.save('spots',SPOTS);
   inp.value='';refreshPDO(photo);
   showToast('Comentario enviado 💬');
@@ -1010,11 +973,16 @@ function afterLogin(){
   loadWeather();
   // sync from server FIRST, then show map
   syncDB().then(()=>{
-    go('map');
     setTimeout(initMap,150);
-    updateProfileUI();
+    go('map');
     renderMarkers(activeFilter);
     renderSheet(activeFilter);
+    updateProfileUI();
+    updateNotifBadge();
+    const last=LS.load('lastScreen','map');
+    if(last&&last!=='map'&&last!=='add'&&last!=='login'){
+      setTimeout(()=>go(last),300);
+    }
   });
   // background sync every 30 seconds - ONLY adds new items, never overwrites
   if(!window._ar){
@@ -1022,6 +990,11 @@ function afterLogin(){
   }
 }
 
+function updateNotifBadge(){
+  // show badge if there are notifications (simplified - always show for now)
+  const badge=document.getElementById('notif-badge');
+  if(badge)badge.style.display='block';
+}
 function updateProfileUI(){
   if(!currentUser)return;
   document.getElementById('prof-name-display').textContent=currentUser.name;
@@ -1148,15 +1121,15 @@ function openSpot(id){
         <div class="info-box"><div class="info-box-label">Profundidad</div><div class="info-box-val">${s.depth}</div></div>
         <div class="info-box"><div class="info-box-label">Acceso</div><div class="info-box-val">${s.pub?'Libre':'Con permiso'}</div></div>
       </div>
-      <div class="sec-label">Especies</div>
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:14px;">
-        ${s.species.map(sp=>`<div class="info-box" style="text-align:center;"><div style="font-size:20px;margin-bottom:3px;">🐟</div><div style="font-size:11px;font-weight:600;">${sp}</div></div>`).join('')}
+      <div class="sec-label">Especies <span style="font-size:9px;color:var(--v);cursor:pointer;" onclick="suggestToSpot('${s.id}','species')">+ Agregar</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:14px;" id="species-grid-${s.id}">
+        ${(s.species||[]).map(sp=>`<div class="info-box" style="text-align:center;"><div style="font-size:20px;margin-bottom:3px;">🐟</div><div style="font-size:11px;font-weight:600;">${sp}</div></div>`).join('')}
       </div>
-      <div class="sec-label">Carnada</div>
-      <div class="tags-row" style="margin-bottom:14px;">${s.baits.map(b=>`<span class="tag bait">${b}</span>`).join('')}</div>
+      <div class="sec-label">Carnada <span style="font-size:9px;color:var(--v);cursor:pointer;" onclick="suggestToSpot('${s.id}','bait')">+ Agregar</span></div>
+      <div class="tags-row" style="margin-bottom:14px;" id="bait-tags-${s.id}">${(s.baits||[]).map(b=>`<span class="tag bait">${b}</span>`).join('')}</div>
       <div class="comment-card">${s.comment}</div>
       ${photoGridHtml}
-      <button class="act-btn outline" style="width:100%;margin-bottom:10px;" onclick="openAddPhotosToSpot('${s.id}')">📸 Mis fotos/videos (máx 5 fotos + 2 videos por usuario)</button>
+      <button class="act-btn outline" style="width:100%;margin-bottom:10px;" onclick="openAddPhotosToSpot('${s.id}')">📸 Mis fotos (máx 4 fotos por usuario)</button>
       ${fp?`
       <div style="display:flex;border:1px solid var(--br);border-radius:var(--r);margin-bottom:12px;overflow:hidden;">
         <div style="flex:1;padding:10px;text-align:center;cursor:pointer;font-size:13px;font-weight:500;color:${myLike?'var(--danger)':'var(--t2)'};" onclick="toggleSpotLike('${fp.id}','${id}')">❤️ <span id="spot-lc-${id}">${fp.likes.length}</span> me gusta</div>
@@ -1229,7 +1202,7 @@ function sendSpotComment(fpId,spotId){
   const inp=document.getElementById('spot-ci-'+spotId);if(!inp)return;
   const text=inp.value.trim();if(!text)return;
   const fp=FEED.find(p=>p.id===fpId);if(!fp)return;
-  fp.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:'Ahora mismo',createdAt:Date.now()});
+  fp.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:fmtDate(Date.now()),createdAt:Date.now()});
   LS.save('feed',FEED);inp.value='';
   const ccEl=document.getElementById('spot-cc-'+spotId);if(ccEl)ccEl.textContent=fp.comments.length;
   const listEl=document.getElementById('spot-comments-'+spotId);
@@ -1255,21 +1228,18 @@ function openAddPhotosToSpot(spotId){
   const spot=SPOTS.find(s=>s.id===spotId);if(!spot)return;
   const mine=(spot.spotPhotos||[]).filter(p=>p.author===currentUser.username);
   const myPh=mine.filter(p=>p.type!=='video').length;
-  const myVi=mine.filter(p=>p.type==='video').length;
-  if(myPh>=5&&myVi>=2){showToast('Ya subiste el máximo para este lugar (5 fotos + 2 videos)');return;}
+  if(myPh>=4){showToast('Ya subiste el máximo de 4 fotos para este lugar');return;}
   const inp=document.createElement('input');
   inp.type='file';inp.multiple=true;
-  inp.accept=myVi<2?'image/*,video/*':'image/*';
+  inp.accept='image/*';
   inp.onchange=function(){
     if(!this.files||!this.files.length)return;
     let ph=myPh,vi=myVi,added=0,skipped=0;
     const promises=Array.from(this.files).map(file=>{
-      const isV=file.type.startsWith('video/');
-      if(isV&&vi>=2){skipped++;return null;}
-      if(!isV&&ph>=5){skipped++;return null;}
-      isV?vi++:ph++;
+      const isV=false; // videos disabled
+      if(ph>=4){skipped++;return null;}
+      ph++;
       return new Promise(res=>{const r=new FileReader();r.onload=e=>{
-          if(isV){res({data:e.target.result,type:'video'});return;}
           compressImage(e.target.result,1200,0.75,compressed=>res({data:compressed,type:'photo'}));
         };r.readAsDataURL(file);});
     }).filter(Boolean);
@@ -1278,7 +1248,7 @@ function openAddPhotosToSpot(spotId){
       results.forEach(r=>{
         spot.spotPhotos.push({id:'ph_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),data:r.data,type:r.type,
           author:currentUser.username,authorName:currentUser.name,authorPhoto:currentUser.photo||null,authorInitials:currentUser.initials,
-          time:new Date().toLocaleString('es-UY'),likes:[],comments:[],createdAt:Date.now()});
+          time:fmtDate(Date.now()),likes:[],comments:[],createdAt:Date.now()});
         added++;
       });
       saveAll();
@@ -1377,8 +1347,17 @@ function publishSpot(){
   if(!dept){showToast('⚠️ Seleccioná el departamento');return;}
   if(!newSpotLat||!newSpotLng){showToast('⚠️ Seleccioná la ubicación en el mapa');return;}
   const species=[...document.querySelectorAll('#chips-species .chip.on')].map(c=>c.textContent);
+  const speciesOther=document.getElementById('species-other-input');
+  if(speciesOther&&speciesOther.value.trim()&&document.querySelector('#chips-species .chip.on+div')!==null||
+     (document.getElementById('species-other-wrap')&&document.getElementById('species-other-wrap').style.display!=='none'&&speciesOther&&speciesOther.value.trim())){
+    if(speciesOther.value.trim()&&!species.includes(speciesOther.value.trim()))species.push(speciesOther.value.trim());
+  }
   if(!species.length){showToast('⚠️ Seleccioná al menos una especie');return;}
   const baits=[...document.querySelectorAll('#chips-bait .chip.on')].map(c=>c.textContent);
+  const baitOther=document.getElementById('bait-other-input');
+  if(document.getElementById('bait-other-wrap')&&document.getElementById('bait-other-wrap').style.display!=='none'&&baitOther&&baitOther.value.trim()){
+    if(!baits.includes(baitOther.value.trim()))baits.push(baitOther.value.trim());
+  }
   const type=[...document.querySelectorAll('#chips-tipo .chip.on')].map(c=>c.textContent).join(' / ')||'Orilla';
   const access=document.querySelector('#chips-access .chip.on')?.textContent||'Público';
   const comment=document.getElementById('add-comment').value.trim();
@@ -1399,7 +1378,7 @@ function publishSpot(){
   SPOTS.push(newSpot);LS.save('spots',SPOTS);pushSpot(newSpot);
   // store photo separately to avoid Supabase size limit
   const fpPhotos=newPhotoData?[newPhotoData]:[];
-  const fp={id:'f_'+Date.now(),spotId:newSpot.id,authorUsername:currentUser?currentUser.username:'',author:currentUser?currentUser.name:'Usuario',authorInitials:currentUser?currentUser.initials:'?',authorPhoto:currentUser?currentUser.photo:null,time:'Recién publicado',loc:name,bg:'linear-gradient(135deg,#9FE1CB,#085041)',photos:[],emoji:'🎣',caption:comment||'Nuevo lugar de pesca.',species,baits,tipo:[type],likes:[],comments:[],createdAt:Date.now()};
+  const fp={id:'f_'+Date.now(),spotId:newSpot.id,authorUsername:currentUser?currentUser.username:'',author:currentUser?currentUser.name:'Usuario',authorInitials:currentUser?currentUser.initials:'?',authorPhoto:currentUser?currentUser.photo:null,time:fmtDate(Date.now()),createdAt:Date.now(),loc:name,bg:'linear-gradient(135deg,#9FE1CB,#085041)',photos:[],emoji:'🎣',caption:comment||'Nuevo lugar de pesca.',species,baits,tipo:[type],likes:[],comments:[],createdAt:Date.now()};
   // push to server without photos first, then add photos locally
   FEED.unshift({...fp,photos:fpPhotos});
   pushFeed(fp).then(()=>{
@@ -1518,7 +1497,7 @@ function sendFeedComment(id){
   const inp=document.getElementById('fc-inp-'+id);if(!inp)return;
   const text=inp.value.trim();if(!text)return;
   const p=FEED.find(x=>x.id===id);if(!p)return;
-  p.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:'Ahora mismo',createdAt:Date.now()});
+  p.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:fmtDate(Date.now()),createdAt:Date.now()});
   LS.save('feed',FEED);inp.value='';
   const listEl=document.getElementById('fc-comm-'+id);
   if(listEl){
@@ -1631,6 +1610,66 @@ function loadWeather(){
 }
 
 // ===== FORM HELPERS =====
+
+function autoLocate(){
+  if(!navigator.geolocation){showToast('Tu dispositivo no soporta geolocalización');return;}
+  const btn=document.getElementById('auto-loc-btn');
+  if(btn)btn.textContent='Obteniendo ubicación...';
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      newSpotLat=Math.round(pos.coords.latitude*10000)/10000;
+      newSpotLng=Math.round(pos.coords.longitude*10000)/10000;
+      const locSet=document.getElementById('loc-set');
+      if(locSet){locSet.style.display='block';locSet.textContent='✅ Ubicación obtenida: '+newSpotLat+', '+newSpotLng;}
+      if(btn)btn.textContent='✅ Ubicación obtenida';
+      showToast('📍 Ubicación capturada correctamente');
+    },
+    err=>{
+      if(btn)btn.textContent='Mi ubicación actual';
+      showToast('No se pudo obtener la ubicación. Usá el mapa.');
+    },
+    {enableHighAccuracy:true,timeout:10000}
+  );
+}
+
+function tOther(el, wrapId){
+  el.classList.toggle('on');
+  const wrap=document.getElementById(wrapId);
+  if(wrap)wrap.style.display=el.classList.contains('on')?'block':'none';
+}
+
+function suggestToSpot(spotId, type){
+  if(!currentUser){showToast('Iniciá sesión para sugerir');return;}
+  const label=type==='species'?'especie':'carnada';
+  const val=prompt('¿Qué '+label+' querés agregar?');
+  if(!val||!val.trim())return;
+  const spot=SPOTS.find(s=>s.id===spotId);if(!spot)return;
+  const arr=type==='species'?spot.species:spot.baits;
+  if(arr.includes(val.trim())){showToast('Ya está en la lista');return;}
+  arr.push(val.trim());
+  pushSpot(spot);LS.save('spots',SPOTS);
+  // update DOM
+  if(type==='species'){
+    const grid=document.getElementById('species-grid-'+spotId);
+    if(grid){const div=document.createElement('div');div.className='info-box';div.style.textAlign='center';div.innerHTML='<div style="font-size:20px;margin-bottom:3px;">🐟</div><div style="font-size:11px;font-weight:600;">'+val.trim()+'</div>';grid.appendChild(div);}
+  } else {
+    const tags=document.getElementById('bait-tags-'+spotId);
+    if(tags){const span=document.createElement('span');span.className='tag bait';span.textContent=val.trim();tags.appendChild(span);}
+  }
+  showToast('✅ '+label+' agregada!');
+}
+
+function renderMySpots(){
+  if(!currentUser)return;
+  const el=document.getElementById('myspots-list');if(!el)return;
+  const mine=SPOTS.filter(s=>s.author===currentUser.username);
+  if(!mine.length){el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;"><div style="font-size:36px;margin-bottom:10px;">🎣</div>Todavía no publicaste ningún lugar.</div>';return;}
+  el.innerHTML=mine.map(s=>{
+    const th=s.spotPhotos&&s.spotPhotos[0]?'<img src="'+s.spotPhotos[0].data+'" style="width:100%;height:100%;object-fit:cover;">':(s.emoji||'🎣');
+    const sid=s.id;
+    return `<div class="spot-row" onclick="openSpot('${sid}')"><div class="spot-icon-wrap">${th}</div><div class="spot-info"><div class="spot-name">${s.name}</div><div class="spot-meta">${s.loc} · ${(s.spotPhotos||[]).length} fotos</div><div class="tags-row">${s.species.slice(0,2).map(x=>'<span class="tag fish">'+x+'</span>').join('')}</div></div><span class="badge ${s.pub?'':'priv'}">${s.pub?'Público':'Privado'}</span></div>`;
+  }).join('');
+}
 function tChip(el){el.classList.toggle('on');}
 function tSingle(el){el.closest('.chips-wrap').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
 
@@ -1646,6 +1685,17 @@ function doLogout(){
   switchTab('login');
 }
 
+
+
+function showSpinner(){const s=document.getElementById('spinner');if(s)s.classList.add('show');}
+function hideSpinner(){const s=document.getElementById('spinner');if(s)s.classList.remove('show');}
+// ===== DATE HELPER =====
+function fmtDate(ts){
+  if(!ts)return '';
+  const d=new Date(ts);
+  const pad=n=>String(n).padStart(2,'0');
+  return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
 // ===== AUTO-LOGIN =====
 (async function(){
   const loadEl=document.getElementById('loading-screen');
