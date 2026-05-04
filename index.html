@@ -473,12 +473,8 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
   <div class="form-wrap">
     <label class="form-label">Fotos y videos del lugar (máx. 5 fotos + 2 videos)</label>
     <div id="new-photos-preview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;"></div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button type="button" onclick="document.getElementById('photo-input').click()" style="flex:1;padding:10px;border-radius:var(--r);border:1.5px dashed var(--v);background:var(--vl);color:var(--vd);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Agregar fotos</button>
-      <button type="button" onclick="document.getElementById('video-input').click()" style="flex:1;padding:10px;border-radius:var(--r);border:1.5px dashed var(--br);background:var(--bg);color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🎥 Agregar video</button>
-    </div>
+    <button type="button" onclick="document.getElementById('photo-input').click()" style="width:100%;margin-bottom:14px;padding:10px;border-radius:var(--r);border:1.5px dashed var(--v);background:var(--vl);color:var(--vd);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Agregar fotos (máx. 4)</button>
     <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="addNewSpotPhotos(this,'photo')"/>
-    <input type="file" id="video-input" accept="video/*" multiple style="display:none" onchange="addNewSpotPhotos(this,'video')"/>
     <div class="form-group"><label class="form-label">Nombre del lugar</label><input class="form-input" type="text" id="add-name" placeholder="Ej: Barra Santa Lucía - Santiago Vázquez"/></div>
     <div class="form-group"><label class="form-label">Departamento</label>
       <select class="form-input" id="add-dept"><option value="">Seleccioná...</option><option>Artigas</option><option>Canelones</option><option>Cerro Largo</option><option>Colonia</option><option>Durazno</option><option>Flores</option><option>Florida</option><option>Lavalleja</option><option>Maldonado</option><option>Montevideo</option><option>Paysandú</option><option>Río Negro</option><option>Rivera</option><option>Rocha</option><option>San José</option><option>Soriano</option><option>Tacuarembó</option><option>Treinta y Tres</option></select>
@@ -1632,7 +1628,7 @@ function renderNotif(){
   const badge=document.getElementById('notif-badge');
   if(badge)badge.style.display='none';
   const notifs=[];
-  notifs.push({dot:false,text:'Bienvenido a PescaUY! Subi tu primer lugar.',time:'al registrarte'});
+  if(!LS.load('welcomeDismissed',false))notifs.push({dot:false,text:'Bienvenido a PescaUY! Subi tu primer lugar.',time:'al registrarte'});
   if(currentUser){
     const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
     FEED.forEach(fp=>{
@@ -1665,7 +1661,12 @@ function renderNotif(){
 }
 function clearNotifs(){
   LS.save('notifCleared', Date.now());
-  renderNotif();
+  LS.save('notifRead', Date.now());
+  LS.save('welcomeDismissed', true);
+  const badge=document.getElementById('notif-badge');
+  if(badge)badge.style.display='none';
+  const el=document.getElementById('notif-list');
+  if(el)el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;">No tenes notificaciones por ahora.</div>';
   showToast('Notificaciones limpiadas');
 }
 
@@ -1888,34 +1889,60 @@ function fmtDate(ts){
 
 // ===== PWA SERVICE WORKER =====
 if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
+  window.addEventListener('load',()=>{
     navigator.serviceWorker.register('/sw.js').catch(()=>{});
   });
 }
 
 // ===== PWA INSTALL PROMPT =====
 let _pwaPrompt=null;
-window.addEventListener('beforeinstallprompt', e=>{
+function showPWABanner(){
+  if(document.getElementById('pwa-banner'))return;
+  if(localStorage.getItem('pwa-dismissed'))return;
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const banner=document.createElement('div');
+  banner.id='pwa-banner';
+  banner.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--v);color:#fff;padding:12px 16px;border-radius:var(--rl);font-size:13px;font-weight:600;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(29,158,117,.4);max-width:90%;';
+  const txt=document.createElement('span');
+  txt.textContent=isIOS?'Instala PescaUY: toca Compartir y "Agregar a inicio"':'Instala PescaUY como app';
+  banner.appendChild(txt);
+  if(!isIOS){
+    const btnInst=document.createElement('button');
+    btnInst.textContent='Instalar';
+    btnInst.style.cssText='background:#fff;color:var(--v);border:none;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:inherit;';
+    btnInst.onclick=installPWA;
+    banner.appendChild(btnInst);
+  }
+  const btnX=document.createElement('button');
+  btnX.textContent='x';
+  btnX.style.cssText='background:rgba(255,255,255,.3);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;flex-shrink:0;';
+  btnX.onclick=function(){banner.remove();localStorage.setItem('pwa-dismissed',1);};
+  banner.appendChild(btnX);
+  document.getElementById('app').appendChild(banner);
+  setTimeout(function(){var b=document.getElementById('pwa-banner');if(b)b.remove();},20000);
+}
+
+
+window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();
   _pwaPrompt=e;
-  // show install banner after 30 seconds if not installed
-  setTimeout(()=>{
-    if(_pwaPrompt&&currentUser){
-      const banner=document.createElement('div');
-      banner.id='pwa-banner';
-      banner.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--v);color:#fff;padding:12px 16px;border-radius:var(--rl);font-size:13px;font-weight:600;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(29,158,117,.4);white-space:nowrap;';
-      banner.innerHTML='<span>📲 Instalá PescaUY como app</span><button onclick="installPWA()" style="background:#fff;color:var(--v);border:none;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">Instalar</button><button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,.3);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;">✕</button>';
-      document.getElementById('app').appendChild(banner);
-      setTimeout(()=>{const b=document.getElementById('pwa-banner');if(b)b.remove();},15000);
-    }
-  },30000);
+  setTimeout(()=>{if(currentUser)showPWABanner();},5000);
 });
+
+// iOS: show banner anyway after 5 seconds (no beforeinstallprompt event)
+const _isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const _isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+if(_isIOS&&!_isStandalone){
+  setTimeout(()=>{if(currentUser)showPWABanner();},5000);
+}
+
 function installPWA(){
   if(!_pwaPrompt)return;
   _pwaPrompt.prompt();
   _pwaPrompt.userChoice.then(()=>{
     _pwaPrompt=null;
     const b=document.getElementById('pwa-banner');if(b)b.remove();
+    localStorage.setItem('pwa-dismissed',1);
   });
 }
 </script>
