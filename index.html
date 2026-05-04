@@ -528,6 +528,10 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
     <div class="menu-item" onclick="go('notif')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notificaciones<span class="chevron">›</span></div>
     <div class="menu-item" onclick="go('reglamento')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Reglamento de pesca UY<span class="chevron">›</span></div>
     <div class="menu-item" onclick="go('reglas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Reglas de la comunidad<span class="chevron">›</span></div>
+    <div class="menu-item" id="install-app-btn" onclick="installFromProfile()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Instalar app en este dispositivo<span class="chevron">›</span>
+    </div>
     <div class="menu-item" onclick="go('soporte')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
       Soporte y denuncias<span class="chevron">›</span>
@@ -1026,6 +1030,10 @@ function updateNotifBadge(){
   badge.style.display=hasNew?'block':'none';
 }
 function updateProfileUI(){
+  // hide install button if already installed as PWA
+  const isInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+  const installBtn=document.getElementById('install-app-btn');
+  if(installBtn)installBtn.style.display=isInstalled?'none':'flex';
   if(!currentUser)return;
   document.getElementById('prof-name-display').textContent=currentUser.name;
   document.getElementById('prof-bio-display').textContent=(currentUser.role==='admin'?'Administrador':'Pescador')+' · PescaUY';
@@ -1916,7 +1924,7 @@ function showPWABanner(){
   const btnX=document.createElement('button');
   btnX.textContent='x';
   btnX.style.cssText='background:rgba(255,255,255,.3);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;flex-shrink:0;';
-  btnX.onclick=function(){banner.remove();localStorage.setItem('pwa-dismissed',1);};
+  btnX.onclick=function(){banner.remove();};
   banner.appendChild(btnX);
   document.getElementById('app').appendChild(banner);
   setTimeout(function(){var b=document.getElementById('pwa-banner');if(b)b.remove();},20000);
@@ -1939,11 +1947,30 @@ if(_isIOS&&!_isStandalone){
 function installPWA(){
   if(!_pwaPrompt)return;
   _pwaPrompt.prompt();
-  _pwaPrompt.userChoice.then(()=>{
+  _pwaPrompt.userChoice.then(r=>{
     _pwaPrompt=null;
     const b=document.getElementById('pwa-banner');if(b)b.remove();
-    localStorage.setItem('pwa-dismissed',1);
+    if(r.outcome==='accepted'){
+      localStorage.setItem('pwa-installed',1);
+      const btn=document.getElementById('install-app-btn');
+      if(btn)btn.style.display='none';
+    }
   });
+}
+function installFromProfile(){
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+  if(isInstalled){showToast('La app ya esta instalada en este dispositivo');return;}
+  if(isIOS){
+    showToast('Toca Compartir (cuadrado con flecha) y luego "Agregar a inicio"');
+    return;
+  }
+  if(_pwaPrompt){
+    localStorage.removeItem('pwa-dismissed');
+    installPWA();
+  } else {
+    showToast('Abri PescaUY en Chrome y usa el menu del navegador para instalar');
+  }
 }
 </script>
 </body>
