@@ -807,7 +807,10 @@ function go(s){
     silentSync().then(()=>renderFeed()).catch(()=>{});
   }
   if(s==='favorites')renderFavorites();
-  if(s==='notif')renderNotif();
+  if(s==='notif'){
+    silentSync().then(()=>renderNotif()).catch(()=>renderNotif());
+    return;
+  }
   if(s==='admin')renderAdmin();
   if(s==='profile')updateProfileUI();
   if(s==='myspots')renderMySpots();
@@ -1264,7 +1267,7 @@ function sendSpotComment(fpId,spotId){
   const inp=document.getElementById('spot-ci-'+spotId);if(!inp)return;
   const text=inp.value.trim();if(!text)return;
   const fp=FEED.find(p=>p.id===fpId);if(!fp)return;
-  fp.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:fmtDate(Date.now()),createdAt:Date.now()});
+  fp.comments.push({author:currentUser.name,authorUsername:currentUser.username,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:fmtDate(Date.now()),createdAt:Date.now()});
   LS.save('feed',FEED);inp.value='';
   const ccEl=document.getElementById('spot-cc-'+spotId);if(ccEl)ccEl.textContent=fp.comments.length;
   const listEl=document.getElementById('spot-comments-'+spotId);
@@ -1274,6 +1277,19 @@ function sendSpotComment(fpId,spotId){
     div.innerHTML='<div style="width:26px;height:26px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">'+av+'</div><div style="flex:1;background:var(--bg);border-radius:0 var(--r) var(--r) var(--r);padding:7px 10px;"><strong style="font-size:11px;">'+currentUser.name+'</strong><div style="font-size:12px;margin-top:2px;">'+text+'</div><div style="font-size:10px;color:var(--t3);margin-top:2px;">Ahora mismo</div></div>';
     listEl.appendChild(div);
   }
+  // ===== NOTIFICACIONES =====
+  const nid='sc_'+fpId+'_'+(fp.comments.length-1);
+  const ntext=currentUser.name+' comentó en "'+fp.loc+'": "'+text.substring(0,40)+'"';
+  const ntime=fmtDate(Date.now());
+  const spot=SPOTS.find(s=>s.id===spotId);
+  if(spot&&spot.author)pushNotifToUser(spot.author,{id:nid,text:ntext,time:ntime,targetFeedId:fpId});
+  if(fp.authorUsername&&fp.authorUsername!==spot?.author)pushNotifToUser(fp.authorUsername,{id:nid+'_au',text:ntext,time:ntime,targetFeedId:fpId});
+  const notifiedAlready=new Set([currentUser.username,spot?.author,fp.authorUsername]);
+  fp.comments.slice(0,-1).forEach(c=>{
+    const cu=c.authorUsername||registeredUsers.find(u=>u.name===c.author)?.username;
+    if(cu&&!notifiedAlready.has(cu)){notifiedAlready.add(cu);pushNotifToUser(cu,{id:nid+'_'+cu,text:ntext,time:ntime,targetFeedId:fpId});}
+  });
+  updateNotifBadge();
   pushFeed(fp);
 }
 
@@ -2054,41 +2070,39 @@ function fmtDate(ts){
 (async function(){
   const loadEl=document.getElementById('loading-screen');
   const hideLoader=()=>{if(loadEl)loadEl.style.display='none';};
-  // safety: max 6 seconds loading
   const safety=setTimeout(()=>{hideLoader();go('login');},6000);
-  
+
   const saved=LS.load('session',null);
   const savedUser=LS.load('sessionUser',null);
-  
+
   if(!saved||!savedUser){
     clearTimeout(safety);hideLoader();go('login');return;
   }
-  
+
+  // Entrar INMEDIATAMENTE con el usuario cacheado — no esperar al servidor
+  currentUser=savedUser;
+  const idx=registeredUsers.findIndex(u=>u.username===saved);
+  if(idx>=0)registeredUsers[idx]=savedUser;else registeredUsers.push(savedUser);
+  clearTimeout(safety);
+  hideLoader();
+  afterLogin();
+
+  // Verificar con servidor en background (sin bloquear)
   try{
-    // verify user exists on server
     const rows=await sGet('users','username=eq.'+encodeURIComponent(saved)+'&select=username,name,role,initials,photo,email');
     if(!rows||!rows.length){
-      // user deleted
-      LS.save('session',null);LS.save('sessionUser',null);
-      clearTimeout(safety);hideLoader();go('login');return;
+      // usuario eliminado del servidor — cerrar sesión
+      doLogout();return;
     }
-    // merge server data with local (keep password from local)
+    // actualizar datos del usuario silenciosamente
     const user={...savedUser,...rows[0],password:savedUser.password};
     currentUser=user;
     LS.save('sessionUser',user);
-    const idx=registeredUsers.findIndex(u=>u.username===saved);
-    if(idx>=0)registeredUsers[idx]=user;else registeredUsers.push(user);
-    clearTimeout(safety);
-    hideLoader();
-    afterLogin();
+    const i=registeredUsers.findIndex(u=>u.username===saved);
+    if(i>=0)registeredUsers[i]=user;else registeredUsers.push(user);
+    updateProfileUI();
   }catch(e){
-    // network error - use cached session
-    currentUser=savedUser;
-    const idx=registeredUsers.findIndex(u=>u.username===saved);
-    if(idx>=0)registeredUsers[idx]=savedUser;else registeredUsers.push(savedUser);
-    clearTimeout(safety);
-    hideLoader();
-    afterLogin();
+    // sin red — seguir con sesión cacheada, no cerrar sesión
   }
 })();
 
