@@ -550,7 +550,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 <!-- FAVORITOS -->
 <div class="screen" id="s-favorites"><div class="topbar"><button class="back-btn" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Mis favoritos</div></div><div class="subscreen" id="favorites-list" style="padding:0;"></div></div>
 <!-- NOTIFICACIONES -->
-<div class="screen" id="s-notif"><div class="topbar"><button class="back-btn" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Notificaciones</div></div><div class="subscreen" style="padding:0;" id="notif-list"></div></div>
+<div class="screen" id="s-notif"><div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Notificaciones</div></div><div class="subscreen" style="padding:0;" id="notif-list"></div></div>
 <!-- REGLAMENTO -->
 <div class="screen" id="s-reglamento"><div class="topbar"><button class="back-btn" onclick="go('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Reglamento de pesca</div></div>
 <div class="subscreen"><div style="background:var(--vl);border-radius:var(--r);padding:12px;margin-bottom:14px;font-size:12px;color:var(--vd);font-weight:500;">Fuente: MGAP – Uruguay</div>
@@ -613,7 +613,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 const APP_VERSION='2.0.0';
 if(localStorage.getItem('puy_version')!==APP_VERSION){
   Object.keys(localStorage).forEach(k=>{
-    if(k.startsWith('puy4_')||k.startsWith('puy_'))localStorage.removeItem(k);
+    if(k.startsWith('puy4_'))localStorage.removeItem(k);
   });
   localStorage.setItem('puy_version',APP_VERSION);
 }
@@ -669,8 +669,6 @@ async function pushUser(u){
 }
 
 // ===== SYNC (load from Supabase) =====
-// _v = local version counter, incremented on every local change
-// syncDB only overwrites if server version is NEWER than local
 async function syncDB(){
   try{
     const sr=await sGet('spots','order=created_at.asc');
@@ -679,12 +677,13 @@ async function syncDB(){
       return s;
     });
     LS.save('spots',SPOTS);
+    // Actualizar mapa INMEDIATAMENTE con los spots, sin esperar el feed
+    if(map){renderMarkers(activeFilter);renderSheet(activeFilter);}
 
     const fr=await sGet('feed','order=created_at.desc');
     const localFeed=LS.load('feed',[]);
     FEED=(fr||[]).map(r=>{
       const s=r.data;if(!s.likes)s.likes=[];if(!s.comments)s.comments=[];if(!s.photos)s.photos=[];
-      // restore photos from local cache
       const lp=localFeed.find(x=>x.id===s.id);
       if(lp&&lp.photos&&lp.photos.length)s.photos=lp.photos;
       return s;
@@ -1690,32 +1689,22 @@ function renderFavorites(){
 }
 
 // ===== NOTIF =====
-function renderNotif(){
+async function renderNotif(){
   const el=document.getElementById('notif-list');if(!el)return;
-  LS.save('notifLastVisit',Date.now());
+  el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t2);font-size:13px;">⏳ Cargando...</div>';
   const badge=document.getElementById('notif-badge');
   const readIds=LS.load('notifReadIds',[]);
-  // Notificaciones push guardadas para este usuario
-  const pushNotifs=getUserNotifs();
+  const pushNotifs=await getUserNotifs();
   const notifs=[];
   if(!LS.load('welcomeDismissed',false))notifs.push({id:'welcome',dot:false,text:'¡Bienvenido a PescaUY! Subí tu primer lugar.',time:'al registrarte',action:null});
   if(currentUser){
-    // Push notifs (comentarios en posts donde participé, nuevos lugares, etc)
     pushNotifs.forEach(n=>{
-      notifs.push({id:n.id,dot:!n.read,text:n.text,time:n.time||'',action:n.targetFeedId?()=>goToFeedPost(n.targetFeedId):n.targetSpotId?()=>openSpot(n.targetSpotId):null});
+      notifs.push({id:n.id,dot:!n.read,text:n.text,time:n.time||'',
+        action:n.targetFeedId?()=>goToFeedPost(n.targetFeedId):n.targetSpotId?()=>openSpot(n.targetSpotId):null});
     });
-    // Comentarios en mis lugares (legacy)
+    // Likes en mis spots
     const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
     FEED.forEach(fp=>{
-      if(mySpotIds.includes(fp.spotId)&&fp.comments){
-        fp.comments.forEach((c,ci)=>{
-          if(c.author!==currentUser.name){
-            const nid='c_'+fp.id+'_'+ci;
-            if(!notifs.find(n=>n.id===nid))
-              notifs.push({id:nid,dot:!readIds.includes(nid),text:c.author+' comentó en '+fp.loc+': "'+c.text.substring(0,40)+'"',time:c.time||'',action:()=>goToFeedPost(fp.id)});
-          }
-        });
-      }
       if(mySpotIds.includes(fp.spotId)&&fp.likes){
         fp.likes.forEach(liker=>{
           if(liker!==currentUser.username){
@@ -1726,11 +1715,12 @@ function renderNotif(){
         });
       }
     });
+    // Nuevos lugares
     const lastCleared=LS.load('notifCleared',0);
     SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).slice(0,5).forEach(s=>{
       const nid='s_'+s.id;
       if(!notifs.find(n=>n.id===nid))
-        notifs.push({id:nid,dot:!readIds.includes(nid),text:'📍 Nuevo lugar publicado: '+s.name,time:s.createdAt?fmtDate(s.createdAt):'',action:()=>openSpot(s.id)});
+        notifs.push({id:nid,dot:!readIds.includes(nid),text:'📍 '+s.author+' publicó un nuevo lugar: '+s.name,time:s.createdAt?fmtDate(s.createdAt):'',action:()=>openSpot(s.id)});
     });
   }
   const hasUnread=notifs.some(n=>n.dot);
@@ -1760,13 +1750,8 @@ function markNotifRead(nid, hasAction, evt){
   const readIds=LS.load('notifReadIds',[]);
   if(!readIds.includes(nid))readIds.push(nid);
   LS.save('notifReadIds',readIds);
-  // marcar push notif como leída también
-  if(currentUser){
-    const key='usernotifs_'+currentUser.username;
-    const pn=LS.load(key,[]);
-    const idx=pn.findIndex(n=>n.id===nid||nid.startsWith(n.id));
-    if(idx>=0){pn[idx].read=true;LS.save(key,pn);}
-  }
+  // marcar en Supabase
+  markNotifReadInDB(nid);
   const dot=document.getElementById('ndot-'+nid);
   if(dot){dot.classList.add('read');}
   if(dot&&dot.parentElement)dot.parentElement.style.background='';
@@ -1784,33 +1769,16 @@ function goToFeedPost(fpId){
   },300);
 }
 
-function updateNotifBadge(){
+async function updateNotifBadge(){
   const badge=document.getElementById('notif-badge');
   if(!badge||!currentUser)return;
+  try{
+    const rows=await sGet('notifications','target_username=eq.'+encodeURIComponent(currentUser.username)+'&read=eq.false&select=id&limit=1');
+    if(rows&&rows.length>0){badge.style.display='block';return;}
+  }catch(e){}
   const readIds=LS.load('notifReadIds',[]);
-  let hasNew=false;
-  // Push notifs no leídas
-  const pushNotifs=getUserNotifs();
-  if(pushNotifs.some(n=>!n.read))hasNew=true;
-  if(!hasNew){
-    const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
-    FEED.forEach(fp=>{
-      if(mySpotIds.includes(fp.spotId)&&fp.comments){
-        fp.comments.forEach((c,ci)=>{
-          if(c.author!==currentUser.name){const nid='c_'+fp.id+'_'+ci;if(!readIds.includes(nid))hasNew=true;}
-        });
-      }
-      if(mySpotIds.includes(fp.spotId)&&fp.likes){
-        fp.likes.forEach(liker=>{
-          if(liker!==currentUser.username){const nid='l_'+fp.id+'_'+liker;if(!readIds.includes(nid))hasNew=true;}
-        });
-      }
-    });
-    const lastCleared=LS.load('notifCleared',0);
-    SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).forEach(s=>{
-      const nid='s_'+s.id;if(!readIds.includes(nid))hasNew=true;
-    });
-  }
+  const lastCleared=LS.load('notifCleared',0);
+  const hasNew=SPOTS.some(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared&&!readIds.includes('s_'+s.id));
   badge.style.display=hasNew?'block':'none';
 }
 
@@ -1818,30 +1786,65 @@ function clearNotifs(){
   LS.save('notifCleared', Date.now());
   LS.save('notifReadIds', []);
   LS.save('welcomeDismissed', true);
+  if(currentUser){fetch(`${SURL}/notifications?target_username=eq.${encodeURIComponent(currentUser.username)}`,{method:'DELETE',headers:SH}).catch(()=>{});}
   const badge=document.getElementById('notif-badge');
   if(badge)badge.style.display='none';
   const el=document.getElementById('notif-list');
-  if(el)el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;">No tenes notificaciones por ahora.</div>';
+  if(el)el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;">No tenés notificaciones por ahora.</div>';
   showToast('Notificaciones limpiadas');
 }
 
-// ===== SISTEMA DE NOTIFICACIONES PUSH LOCAL =====
-// Guarda notificaciones por usuario en localStorage
-function pushNotifToUser(targetUsername, notif){
-  if(!targetUsername||targetUsername===currentUser?.username)return;
-  const key='usernotifs_'+targetUsername;
-  const notifs=LS.load(key,[]);
-  // evitar duplicados
-  if(notifs.find(n=>n.id===notif.id))return;
-  notifs.unshift({...notif, ts:Date.now(), read:false});
-  // max 50 notificaciones por usuario
-  if(notifs.length>50)notifs.length=50;
-  LS.save(key,notifs);
+// ===== SISTEMA DE NOTIFICACIONES (Supabase) =====
+async function pushNotifToUser(targetUsername, notif){
+  if(!targetUsername||!currentUser)return;
+  if(targetUsername===currentUser.username)return;
+  try{
+    // verificar si ya existe
+    const ex=await sGet('notifications','id=eq.'+encodeURIComponent(notif.id)+'&target_username=eq.'+encodeURIComponent(targetUsername)+'&select=id');
+    if(ex&&ex.length)return;
+    await sPost('notifications',{
+      id:notif.id,
+      target_username:targetUsername,
+      text:notif.text,
+      time:notif.time||'',
+      target_feed_id:notif.targetFeedId||null,
+      target_spot_id:notif.targetSpotId||null,
+      read:false
+    });
+  }catch(e){
+    // fallback a localStorage si falla Supabase
+    const key='usernotifs_'+targetUsername;
+    const notifs=LS.load(key,[]);
+    if(!notifs.find(n=>n.id===notif.id)){
+      notifs.unshift({...notif,ts:Date.now(),read:false});
+      if(notifs.length>50)notifs.length=50;
+      LS.save(key,notifs);
+    }
+  }
 }
 
-function getUserNotifs(){
+async function getUserNotifs(){
   if(!currentUser)return[];
-  return LS.load('usernotifs_'+currentUser.username,[]);
+  try{
+    const rows=await sGet('notifications','target_username=eq.'+encodeURIComponent(currentUser.username)+'&order=created_at.desc&limit=50');
+    return (rows||[]).map(r=>({
+      id:r.id,
+      text:r.text,
+      time:r.time||'',
+      read:r.read||false,
+      targetFeedId:r.target_feed_id||null,
+      targetSpotId:r.target_spot_id||null
+    }));
+  }catch(e){
+    return LS.load('usernotifs_'+currentUser.username,[]);
+  }
+}
+
+async function markNotifReadInDB(nid){
+  try{
+    await fetch(`${SURL}/notifications?id=eq.${encodeURIComponent(nid)}&target_username=eq.${encodeURIComponent(currentUser.username)}`,
+      {method:'PATCH',headers:SH,body:JSON.stringify({read:true})});
+  }catch(e){}
 }
 
 // ===== PERFIL PÚBLICO =====
