@@ -475,9 +475,9 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 <div class="screen" id="s-add">
   <div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Agregar lugar</div></div>
   <div class="form-wrap">
-    <label class="form-label">Fotos del lugar (máx. 4 fotos)</label>
+    <label class="form-label">Fotos del lugar (máx. 3 fotos)</label>
     <div id="new-photos-preview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;"></div>
-    <button type="button" onclick="document.getElementById('photo-input').click()" style="width:100%;margin-bottom:14px;padding:10px;border-radius:var(--r);border:1.5px dashed var(--v);background:var(--vl);color:var(--vd);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Agregar fotos (máx. 4)</button>
+    <button type="button" onclick="document.getElementById('photo-input').click()" style="width:100%;margin-bottom:14px;padding:10px;border-radius:var(--r);border:1.5px dashed var(--v);background:var(--vl);color:var(--vd);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Agregar fotos (máx. 3)</button>
     <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="addNewSpotPhotos(this,'photo')"/>
     <div class="form-group"><label class="form-label">Nombre del lugar</label><input class="form-input" type="text" id="add-name" placeholder="Ej: Barra Santa Lucía - Santiago Vázquez"/></div>
     <div class="form-group">
@@ -1073,13 +1073,16 @@ function updateProfileUI(){
 }
 function updateProfilePhoto(input){
   if(!input.files||!input.files[0])return;
-  const r=new FileReader();
-  r.onload=e=>{
-    currentUser.photo=e.target.result;
+  const file=input.files[0];
+  showToast('⏳ Subiendo foto...');
+  uploadToCloudinary(file).then(url=>{
+    if(!url){showToast('Error al subir foto');return;}
+    currentUser.photo=url;
     const idx=registeredUsers.findIndex(u=>u.username===currentUser.username);
-    if(idx>=0)registeredUsers[idx].photo=e.target.result;
-    LS.save('spots',SPOTS);LS.save('users',registeredUsers);LS.save('sessionUser',currentUser);pushUser(currentUser);updateProfileUI();showToast('Foto actualizada ✅');
-  };r.readAsDataURL(input.files[0]);
+    if(idx>=0)registeredUsers[idx].photo=url;
+    LS.save('spots',SPOTS);LS.save('users',registeredUsers);LS.save('sessionUser',currentUser);
+    pushUser(currentUser);updateProfileUI();showToast('Foto actualizada ✅');
+  });
 }
 
 // ===== MAP =====
@@ -1193,7 +1196,7 @@ function openSpot(id){
       <div class="tags-row" style="margin-bottom:14px;" id="bait-tags-${s.id}">${(s.baits||[]).map(b=>`<span class="tag bait">${b}</span>`).join('')}</div>
       <div class="comment-card">${s.comment}</div>
       ${photoGridHtml}
-      <button class="act-btn outline" style="width:100%;margin-bottom:10px;" onclick="openAddPhotosToSpot('${s.id}')">📸 Mis fotos (máx 4 fotos por usuario)</button>
+      <button class="act-btn outline" style="width:100%;margin-bottom:10px;" onclick="openAddPhotosToSpot('${s.id}')">📸 Mis fotos (máx 3 fotos por usuario)</button>
       ${fp?`
       <div style="display:flex;border:1px solid var(--br);border-radius:var(--r);margin-bottom:12px;overflow:hidden;">
         <div style="flex:1;padding:10px;text-align:center;cursor:pointer;font-size:13px;font-weight:500;color:${myLike?'var(--danger)':'var(--t2)'};" onclick="toggleSpotLike('${fp.id}','${id}')">❤️ <span id="spot-lc-${id}">${fp.likes.length}</span> me gusta</div>
@@ -1305,33 +1308,33 @@ function openAddPhotosToSpot(spotId){
   const spot=SPOTS.find(s=>s.id===spotId);if(!spot)return;
   const mine=(spot.spotPhotos||[]).filter(p=>p.author===currentUser.username);
   const myPh=mine.filter(p=>p.type!=='video').length;
-  if(myPh>=4){showToast('Ya subiste el máximo de 4 fotos para este lugar');return;}
+  if(myPh>=3){showToast('Ya subiste el máximo de 3 fotos para este lugar');return;}
   const inp=document.createElement('input');
-  inp.type='file';inp.multiple=true;
-  inp.accept='image/*';
-  inp.onchange=function(){
+  inp.type='file';inp.multiple=true;inp.accept='image/*';
+  inp.onchange=async function(){
     if(!this.files||!this.files.length)return;
-    let ph=myPh,vi=myVi,added=0,skipped=0;
-    const promises=Array.from(this.files).map(file=>{
-      const isV=false; // videos disabled
-      if(ph>=4){skipped++;return null;}
+    let ph=myPh,added=0,skipped=0;
+    showToast('⏳ Subiendo fotos...');
+    const files=Array.from(this.files);
+    for(const file of files){
+      if(ph>=3){skipped++;continue;}
       ph++;
-      return new Promise(res=>{const r=new FileReader();r.onload=e=>{
-          compressImage(e.target.result,1200,0.75,compressed=>res({data:compressed,type:'photo'}));
-        };r.readAsDataURL(file);});
-    }).filter(Boolean);
-    Promise.all(promises).then(results=>{
-      if(!spot.spotPhotos)spot.spotPhotos=[];
-      results.forEach(r=>{
-        spot.spotPhotos.push({id:'ph_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),data:r.data,type:r.type,
-          author:currentUser.username,authorName:currentUser.name,authorPhoto:currentUser.photo||null,authorInitials:currentUser.initials,
-          time:fmtDate(Date.now()),likes:[],comments:[],createdAt:Date.now()});
+      const url=await uploadToCloudinary(file);
+      if(url){
+        if(!spot.spotPhotos)spot.spotPhotos=[];
+        spot.spotPhotos.push({
+          id:'ph_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),
+          data:url,type:'photo',
+          author:currentUser.username,authorName:currentUser.name,
+          authorPhoto:currentUser.photo||null,authorInitials:currentUser.initials,
+          time:fmtDate(Date.now()),likes:[],comments:[],createdAt:Date.now()
+        });
         added++;
-      });
-      saveAll();
-      showToast(`✅ ${added} archivo(s) agregado(s)${skipped?' ('+skipped+' omitidos)':''}`);
-      openSpot(spotId);
-    });
+      }
+    }
+    saveAll();pushSpot(spot);
+    showToast(`✅ ${added} foto(s) agregada(s)${skipped?' ('+skipped+' omitidas)':''}`);
+    openSpot(spotId);
   };
   inp.click();
 }
@@ -1379,6 +1382,23 @@ function closeMapPicker(confirm){
   else{newSpotLat=lat;newSpotLng=lng;document.getElementById('loc-set').style.display='block';document.getElementById('loc-set').textContent=`✅ ${lat}, ${lng}`;document.getElementById('loc-btn').textContent='✅ Punto seleccionado — tocá para cambiar';}
 }
 
+// ===== CLOUDINARY =====
+const CLOUD_NAME='dauqvhkbj';
+const CLOUD_PRESET='pescauy';
+
+async function uploadToCloudinary(file){
+  const formData=new FormData();
+  formData.append('file',file);
+  formData.append('upload_preset',CLOUD_PRESET);
+  formData.append('folder','pescauy');
+  try{
+    const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,{method:'POST',body:formData});
+    const d=await r.json();
+    if(d.secure_url)return d.secure_url;
+    return null;
+  }catch(e){console.error('Cloudinary error',e);return null;}
+}
+
 // ===== PUBLISH SPOT =====
 
 function compressImage(dataUrl, maxW, quality, cb){
@@ -1397,21 +1417,34 @@ function compressImage(dataUrl, maxW, quality, cb){
 
 function addNewSpotPhotos(input, mediaType){
   if(!input.files||!input.files.length)return;
-  const maxP=4;
-  Array.from(input.files).forEach(file=>{
+  const maxP=3;
+  const files=Array.from(input.files);
+  input.value='';
+  files.forEach(async file=>{
     const curP=newSpotMedia.filter(m=>m.type==='photo').length;
-    if(curP>=maxP){showToast('Máximo 4 fotos por publicación');return;}
-    const r=new FileReader();
-    r.onload=e=>{
-      const data=e.target.result;
-      compressImage(data,1200,0.75,compressed=>{
-        newSpotMedia.push({data:compressed,type:'photo',isCover:newSpotMedia.length===0});
+    if(curP>=maxP){showToast('Máximo 3 fotos por publicación');return;}
+    // preview local inmediato
+    const localUrl=URL.createObjectURL(file);
+    const idx=newSpotMedia.length;
+    newSpotMedia.push({data:localUrl,type:'photo',isCover:idx===0,uploading:true,file});
+    renderNewSpotPhotos();
+    // subir a Cloudinary
+    const url=await uploadToCloudinary(file);
+    if(url){
+      newSpotMedia[idx].data=url;
+      newSpotMedia[idx].uploading=false;
+    }else{
+      // fallback: comprimir y guardar local si falla Cloudinary
+      const reader=new FileReader();
+      reader.onload=e=>compressImage(e.target.result,800,0.6,compressed=>{
+        newSpotMedia[idx].data=compressed;
+        newSpotMedia[idx].uploading=false;
         renderNewSpotPhotos();
       });
-    };
-    r.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    }
+    renderNewSpotPhotos();
   });
-  input.value='';
 }
 function renderNewSpotPhotos(){
   const grid=document.getElementById('new-photos-preview');
@@ -1420,10 +1453,10 @@ function renderNewSpotPhotos(){
   grid.innerHTML=newSpotMedia.map((m,i)=>{
     const isVid=m.type==='video';
     const coverBadge=m.isCover?'<div style="position:absolute;bottom:3px;left:3px;background:var(--v);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;">PORTADA</div>':'';
+    const uploadingBadge=m.uploading?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;"><div style="width:20px;height:20px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:lureSwim .6s linear infinite;"></div></div>':'';
     const media=isVid?`<video src="${m.data}" style="width:100%;height:100%;object-fit:cover;">`:`<img src="${m.data}" style="width:100%;height:100%;object-fit:cover;"/>`;
     return `<div style="aspect-ratio:1;position:relative;border-radius:8px;overflow:hidden;border:${m.isCover?'2px solid var(--v)':'1px solid var(--br)'};">
-      ${media}
-      ${coverBadge}
+      ${media}${uploadingBadge}${coverBadge}
       ${!m.isCover&&m.type==='photo'?`<div onclick="setNewSpotCover(${i})" style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;cursor:pointer;">Portada</div>`:''}
       <div onclick="removeNewSpotMedia(${i})" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;">✕</div>
     </div>`;
@@ -1448,6 +1481,7 @@ function setAddStar(v){addStarVal=v;document.querySelectorAll('#add-stars .rate-
 function publishSpot(){
   const name=document.getElementById('add-name').value.trim();
   if(!name){showToast('⚠️ Ingresá el nombre');return;}
+  if(newSpotMedia.some(m=>m.uploading)){showToast('⏳ Esperá que terminen de subir las fotos...');return;}
   if(!newSpotLat||!newSpotLng){showToast('⚠️ Seleccioná la ubicación en el mapa');return;}
   const species=[...document.querySelectorAll('#chips-species .chip.on')].map(c=>c.textContent);
   const speciesOther=document.getElementById('species-other-input');
