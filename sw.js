@@ -1,5 +1,5 @@
 // PescaUY Service Worker
-const CACHE = 'pescauy-v2.3';
+const CACHE = 'pescauy-v2.4';
 const ASSETS = ['/'];
 
 self.addEventListener('install', e => {
