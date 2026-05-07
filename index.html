@@ -25,14 +25,16 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
 <style>
 :root{--v:#1D9E75;--vl:#E1F5EE;--vd:#085041;--am:#FAC775;--bg:#f5f5f0;--sf:#fff;--br:rgba(0,0,0,0.1);--tx:#1a1a18;--t2:#6b6b63;--t3:#9b9b93;--danger:#E24B4A;--warn:#BA7517;--r:10px;--rl:14px;}
+@keyframes lureSwing{0%{transform:rotate(-12deg) scale(1);}100%{transform:rotate(12deg) scale(1.07);}}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);}
 .app{max-width:430px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--sf);}
 .screen{display:none;flex-direction:column;flex:1;overflow:hidden;}
 .screen.active{display:flex;}
 .topbar{background:var(--sf);padding:14px 16px 12px;border-bottom:1px solid var(--br);display:flex;align-items:center;gap:10px;flex-shrink:0;z-index:10;}
-.logo-mark{width:30px;height:30px;border-radius:9px;background:var(--v);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-mark{width:30px;height:30px;border-radius:9px;background:var(--v);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
 .logo-mark svg{width:16px;height:16px;}
+.logo-mark img{width:100%;height:100%;object-fit:cover;border-radius:9px;}
 .ttitle{font-size:16px;font-weight:600;color:var(--tx);flex:1;letter-spacing:-.3px;}
 .ttitle span{color:var(--v);}
 .avatar-btn{width:32px;height:32px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid var(--v);flex-shrink:0;overflow:hidden;}
@@ -367,7 +369,9 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 
 <!-- LOADING -->
 <div class="loading-screen" id="loading-screen">
-  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M3 18c3-4 6-6 9-6s6 2 9 6"/><circle cx="12" cy="7" r="3"/></svg></div>
+  <div class="logo" style="background:none;box-shadow:none;width:110px;height:110px;border-radius:24px;overflow:hidden;animation:lureSwing 1.2s ease-in-out infinite alternate;">
+    <img src="/icon-512.png" style="width:100%;height:100%;object-fit:cover;border-radius:24px;" onerror="this.style.display='none';this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2.5\' stroke-linecap=\'round\'><path d=\'M3 18c3-4 6-6 9-6s6 2 9 6\'/><circle cx=\'12\' cy=\'7\' r=\'3\'/></svg>'"/>
+  </div>
   <p>Cargando PescaUY...</p>
 </div>
 
@@ -375,7 +379,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 <div class="screen" id="s-login">
   <div class="auth-container">
     <div class="auth-brand">
-      <div class="auth-logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M3 18c3-4 6-6 9-6s6 2 9 6"/><path d="M7 14c1.5-2 3-3 5-3"/><circle cx="12" cy="7" r="3"/></svg></div>
+      <div class="auth-logo" style="background:none;padding:0;overflow:hidden;"><img src="/icon-512.png" style="width:100%;height:100%;object-fit:cover;border-radius:16px;" onerror="this.parentElement.style.background='var(--v)';this.style.display='none'"/></div>
       <div class="auth-name">PescaUY</div>
       <div class="auth-tagline">La comunidad de pescadores de Uruguay</div>
     </div>
@@ -404,7 +408,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 <!-- MAPA -->
 <div class="screen" id="s-map">
   <div class="topbar">
-    <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M3 18c3-4 6-6 9-6s6 2 9 6"/><circle cx="12" cy="7" r="3"/></svg></div>
+    <div class="logo-mark"><img src="/icon-512.png" alt="PescaUY" onerror="this.style.display='none'"/></div>
     <div class="ttitle">Pesca<span>UY</span></div>
     <div style="position:relative;display:flex;gap:8px;align-items:center;">
     <div style="position:relative;cursor:pointer;" onclick="go('notif')">
@@ -454,7 +458,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 <!-- FEED -->
 <div class="screen" id="s-feed">
   <div class="topbar">
-    <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M3 18c3-4 6-6 9-6s6 2 9 6"/><circle cx="12" cy="7" r="3"/></svg></div>
+    <div class="logo-mark"><img src="/icon-512.png" alt="PescaUY" onerror="this.style.display='none'"/></div>
     <div class="ttitle">Pesca<span>UY</span></div>
     <div class="avatar-btn" id="feed-avatar" onclick="go('profile')"></div>
   </div>
@@ -471,14 +475,11 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 <div class="screen" id="s-add">
   <div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle">Agregar lugar</div></div>
   <div class="form-wrap">
-    <label class="form-label">Fotos y videos del lugar (máx. 5 fotos + 2 videos)</label>
+    <label class="form-label">Fotos del lugar (máx. 4 fotos)</label>
     <div id="new-photos-preview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;"></div>
     <button type="button" onclick="document.getElementById('photo-input').click()" style="width:100%;margin-bottom:14px;padding:10px;border-radius:var(--r);border:1.5px dashed var(--v);background:var(--vl);color:var(--vd);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Agregar fotos (máx. 4)</button>
     <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="addNewSpotPhotos(this,'photo')"/>
     <div class="form-group"><label class="form-label">Nombre del lugar</label><input class="form-input" type="text" id="add-name" placeholder="Ej: Barra Santa Lucía - Santiago Vázquez"/></div>
-    <div class="form-group"><label class="form-label">Departamento</label>
-      <select class="form-input" id="add-dept"><option value="">Seleccioná...</option><option>Artigas</option><option>Canelones</option><option>Cerro Largo</option><option>Colonia</option><option>Durazno</option><option>Flores</option><option>Florida</option><option>Lavalleja</option><option>Maldonado</option><option>Montevideo</option><option>Paysandú</option><option>Río Negro</option><option>Rivera</option><option>Rocha</option><option>San José</option><option>Soriano</option><option>Tacuarembó</option><option>Treinta y Tres</option></select>
-    </div>
     <div class="form-group">
       <label class="form-label">Ubicación exacta en el mapa</label>
       <button class="location-picker-btn" onclick="openMapPickerGPS()" id="loc-btn">
@@ -487,10 +488,11 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
       </button>
       <div class="location-set" id="loc-set" style="display:none;"></div>
     </div>
-    <div class="form-group"><label class="form-label">Tipo de pesca</label><div class="chips-wrap" id="chips-tipo"><div class="chip on" onclick="tChip(this)">Orilla</div><div class="chip" onclick="tChip(this)">Embarcado</div><div class="chip" onclick="tChip(this)">Mosca</div><div class="chip" onclick="tChip(this)">Spinning</div><div class="chip" onclick="tChip(this)">Costa/Mar</div></div></div>
+    <div class="form-group"><label class="form-label">Tipo de pesca</label><div class="chips-wrap" id="chips-tipo"><div class="chip on" onclick="tChip(this)">Orilla</div><div class="chip" onclick="tChip(this)">Embarcado</div><div class="chip" onclick="tChip(this)">Mosca</div><div class="chip" onclick="tChip(this)">Spinning</div><div class="chip" onclick="tChip(this)">Costa/Mar</div><div class="chip" onclick="tOther(this,'tipo-other-wrap')">Otro</div></div>
+    <div id="tipo-other-wrap" style="display:none;margin-top:6px;"><input class="form-input" id="tipo-other-input" type="text" placeholder="Escribí el tipo de pesca..." style="font-size:13px;padding:8px 12px;"/></div></div>
     <div class="form-group"><label class="form-label">Especies</label><div class="chips-wrap" id="chips-species"><div class="chip" onclick="tChip(this)">Dorado</div><div class="chip" onclick="tChip(this)">Boga</div><div class="chip" onclick="tChip(this)">Tararira</div><div class="chip" onclick="tChip(this)">Pejerrey</div><div class="chip" onclick="tChip(this)">Surubí</div><div class="chip" onclick="tChip(this)">Bagre</div><div class="chip" onclick="tChip(this)">Corvina</div><div class="chip" onclick="tChip(this)">Lenguado</div><div class="chip" onclick="tChip(this)">Brótola</div><div class="chip" onclick="tChip(this)">Pescadilla</div><div class="chip" onclick="tOther(this,'species-other-wrap')">Otros</div></div>
     <div id="species-other-wrap" style="display:none;margin-top:6px;"><input class="form-input" id="species-other-input" type="text" placeholder="Escribí la especie..." style="font-size:13px;padding:8px 12px;"/></div></div>
-    <div class="form-group"><label class="form-label">Carnada</label><div class="chips-wrap" id="chips-bait"><div class="chip" onclick="tChip(this)">Lombriz</div><div class="chip" onclick="tChip(this)">Carnada viva</div><div class="chip" onclick="tChip(this)">Masa</div><div class="chip" onclick="tChip(this)">Señuelo</div><div class="chip" onclick="tChip(this)">Carne</div><div class="chip" onclick="tChip(this)">Mosca artificial</div><div class="chip" onclick="tChip(this)">Mejillón</div><div class="chip" onclick="tChip(this)">Otro</div></div>
+    <div class="form-group"><label class="form-label">Carnada</label><div class="chips-wrap" id="chips-bait"><div class="chip" onclick="tChip(this)">Lombriz</div><div class="chip" onclick="tChip(this)">Carnada viva</div><div class="chip" onclick="tChip(this)">Masa</div><div class="chip" onclick="tChip(this)">Señuelo</div><div class="chip" onclick="tChip(this)">Carne</div><div class="chip" onclick="tChip(this)">Mosca artificial</div><div class="chip" onclick="tChip(this)">Mejillón</div><div class="chip" onclick="tOther(this,'bait-other-wrap')">Otro</div></div>
     <div id="bait-other-wrap" style="display:none;margin-top:6px;"><input class="form-input" id="bait-other-input" type="text" placeholder="Escribí la carnada..." style="font-size:13px;padding:8px 12px;"/></div></div>
     <div class="form-group"><label class="form-label">Tu calificación</label><div class="star-rate" id="add-stars"><span class="rate-star" onclick="setAddStar(1)">★</span><span class="rate-star" onclick="setAddStar(2)">★</span><span class="rate-star" onclick="setAddStar(3)">★</span><span class="rate-star" onclick="setAddStar(4)">★</span><span class="rate-star" onclick="setAddStar(5)">★</span></div></div>
     <div class="form-group"><label class="form-label">Acceso</label><div class="chips-wrap" id="chips-access"><div class="chip on" onclick="tSingle(this)">Público</div><div class="chip" onclick="tSingle(this)">Privado</div><div class="chip" onclick="tSingle(this)">Con permiso</div></div></div>
@@ -1010,25 +1012,6 @@ function afterLogin(){
   }
 }
 
-function updateNotifBadge(){
-  const badge=document.getElementById('notif-badge');
-  if(!badge||!currentUser)return;
-  const lastRead=LS.load('notifRead',0);
-  // check if there are new comments on my spots since last read
-  let hasNew=false;
-  const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
-  FEED.forEach(fp=>{
-    if(mySpotIds.includes(fp.spotId)&&fp.comments){
-      fp.comments.forEach(c=>{
-        if(c.author!==currentUser.name&&(c.createdAt||0)>lastRead)hasNew=true;
-      });
-    }
-  });
-  // check new spots
-  const lastCleared=LS.load('notifCleared',0);
-  if(SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).length>0)hasNew=true;
-  badge.style.display=hasNew?'block':'none';
-}
 function updateProfileUI(){
   // hide install button if already installed as PWA
   const isInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
@@ -1260,7 +1243,7 @@ function deleteSpotComment(fpId,idx){
   fp.comments.splice(idx,1);saveAll();showToast('Comentario eliminado');
 }
 
-// ===== ADD PHOTOS (per user: max 5 photos + 2 videos) =====
+// ===== ADD PHOTOS (per user: max 4 photos) =====
 function openAddPhotosToSpot(spotId){
   if(!currentUser){showToast('Iniciá sesión para agregar fotos');return;}
   const spot=SPOTS.find(s=>s.id===spotId);if(!spot)return;
@@ -1358,26 +1341,17 @@ function compressImage(dataUrl, maxW, quality, cb){
 
 function addNewSpotPhotos(input, mediaType){
   if(!input.files||!input.files.length)return;
-  const photos=newSpotMedia.filter(m=>m.type==='photo').length;
-  const videos=newSpotMedia.filter(m=>m.type==='video').length;
-  const maxP=5,maxV=2;
+  const maxP=4;
   Array.from(input.files).forEach(file=>{
     const curP=newSpotMedia.filter(m=>m.type==='photo').length;
-    const curV=newSpotMedia.filter(m=>m.type==='video').length;
-    if(mediaType==='photo'&&curP>=maxP){showToast('Máximo 5 fotos');return;}
-    if(mediaType==='video'&&curV>=maxV){showToast('Máximo 2 videos');return;}
+    if(curP>=maxP){showToast('Máximo 4 fotos por publicación');return;}
     const r=new FileReader();
     r.onload=e=>{
       const data=e.target.result;
-      if(mediaType==='photo'){
-        compressImage(data,1200,0.75,compressed=>{
-          newSpotMedia.push({data:compressed,type:'photo',isCover:newSpotMedia.length===0});
-          renderNewSpotPhotos();
-        });
-      } else {
-        newSpotMedia.push({data,type:'video',isCover:false});
+      compressImage(data,1200,0.75,compressed=>{
+        newSpotMedia.push({data:compressed,type:'photo',isCover:newSpotMedia.length===0});
         renderNewSpotPhotos();
-      }
+      });
     };
     r.readAsDataURL(file);
   });
@@ -1417,14 +1391,11 @@ function previewPhoto(input){
 function setAddStar(v){addStarVal=v;document.querySelectorAll('#add-stars .rate-star').forEach((s,i)=>s.classList.toggle('on',i<v));}
 function publishSpot(){
   const name=document.getElementById('add-name').value.trim();
-  const dept=document.getElementById('add-dept').value;
   if(!name){showToast('⚠️ Ingresá el nombre');return;}
-  if(!dept){showToast('⚠️ Seleccioná el departamento');return;}
   if(!newSpotLat||!newSpotLng){showToast('⚠️ Seleccioná la ubicación en el mapa');return;}
   const species=[...document.querySelectorAll('#chips-species .chip.on')].map(c=>c.textContent);
   const speciesOther=document.getElementById('species-other-input');
-  if(speciesOther&&speciesOther.value.trim()&&document.querySelector('#chips-species .chip.on+div')!==null||
-     (document.getElementById('species-other-wrap')&&document.getElementById('species-other-wrap').style.display!=='none'&&speciesOther&&speciesOther.value.trim())){
+  if(document.getElementById('species-other-wrap')&&document.getElementById('species-other-wrap').style.display!=='none'&&speciesOther&&speciesOther.value.trim()){
     if(speciesOther.value.trim()&&!species.includes(speciesOther.value.trim()))species.push(speciesOther.value.trim());
   }
   if(!species.length){showToast('⚠️ Seleccioná al menos una especie');return;}
@@ -1433,7 +1404,12 @@ function publishSpot(){
   if(document.getElementById('bait-other-wrap')&&document.getElementById('bait-other-wrap').style.display!=='none'&&baitOther&&baitOther.value.trim()){
     if(!baits.includes(baitOther.value.trim()))baits.push(baitOther.value.trim());
   }
-  const type=[...document.querySelectorAll('#chips-tipo .chip.on')].map(c=>c.textContent).join(' / ')||'Orilla';
+  const tipoChips=[...document.querySelectorAll('#chips-tipo .chip.on')].map(c=>c.textContent);
+  const tipoOther=document.getElementById('tipo-other-input');
+  if(document.getElementById('tipo-other-wrap')&&document.getElementById('tipo-other-wrap').style.display!=='none'&&tipoOther&&tipoOther.value.trim()){
+    if(!tipoChips.includes(tipoOther.value.trim()))tipoChips.push(tipoOther.value.trim());
+  }
+  const type=tipoChips.filter(t=>t!=='Otro').join(' / ')||(tipoChips[0]||'Orilla');
   const access=document.querySelector('#chips-access .chip.on')?.textContent||'Público';
   const comment=document.getElementById('add-comment').value.trim();
   const filterKeys=species.map(s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
@@ -1449,7 +1425,7 @@ function publishSpot(){
   // cover photo for feed
   const coverMedia=newSpotMedia.find(m=>m.isCover)||newSpotMedia.find(m=>m.type==='photo')||newSpotMedia[0]||null;
   newPhotoData=coverMedia?coverMedia.data:null;
-  const newSpot={id:'s_'+Date.now(),name,loc:dept,lat:newSpotLat,lng:newSpotLng,pub:access==='Público',stars:addStarVal||4,votes:1,ratings:{},species,baits,type,season:'Todo el año',depth:'Variable',emoji:'🎣',comment:comment||'Lugar agregado por la comunidad.',filter:filterKeys,spotPhotos:photoEntry,author:currentUser?currentUser.username:'user',createdAt:Date.now()};
+  const newSpot={id:'s_'+Date.now(),name,loc:name,lat:newSpotLat,lng:newSpotLng,pub:access==='Público',stars:addStarVal||4,votes:1,ratings:{},species,baits,type,season:'Todo el año',depth:'Variable',emoji:'🎣',comment:comment||'Lugar agregado por la comunidad.',filter:filterKeys,spotPhotos:photoEntry,author:currentUser?currentUser.username:'user',createdAt:Date.now()};
   SPOTS.push(newSpot);LS.save('spots',SPOTS);pushSpot(newSpot);
   // store photo separately to avoid Supabase size limit
   const fpPhotos=newPhotoData?[newPhotoData]:[];
@@ -1463,7 +1439,7 @@ function publishSpot(){
     LS.save('feed',FEED);
   });
   saveAll();
-  document.getElementById('add-name').value='';document.getElementById('add-dept').value='';document.getElementById('add-comment').value='';
+  document.getElementById('add-name').value='';document.getElementById('add-comment').value='';
   document.getElementById('loc-set').style.display='none';document.getElementById('loc-btn').textContent='Seleccionar punto en el mapa';
   document.querySelectorAll('#s-add .chip').forEach(c=>c.classList.remove('on'));
   document.querySelector('#chips-tipo .chip').classList.add('on');document.querySelector('#chips-access .chip').classList.add('on');
@@ -1632,27 +1608,44 @@ function renderFavorites(){
 // ===== NOTIF =====
 function renderNotif(){
   const el=document.getElementById('notif-list');if(!el)return;
-  LS.save('notifRead',Date.now());
+  // DON'T mark all as read - only update lastVisit for badge calc
+  LS.save('notifLastVisit',Date.now());
   const badge=document.getElementById('notif-badge');
-  if(badge)badge.style.display='none';
+  
+  const readIds=LS.load('notifReadIds',[]);
   const notifs=[];
-  if(!LS.load('welcomeDismissed',false))notifs.push({dot:false,text:'Bienvenido a PescaUY! Subi tu primer lugar.',time:'al registrarte'});
+  if(!LS.load('welcomeDismissed',false))notifs.push({id:'welcome',dot:false,text:'Bienvenido a PescaUY! Subi tu primer lugar.',time:'al registrarte',action:null});
   if(currentUser){
     const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
     FEED.forEach(fp=>{
       if(mySpotIds.includes(fp.spotId)&&fp.comments){
-        fp.comments.forEach(c=>{
+        fp.comments.forEach((c,ci)=>{
           if(c.author!==currentUser.name){
-            notifs.push({dot:true,text:'Comentario de '+c.author+' en '+fp.loc+': "'+c.text.substring(0,40)+'"',time:c.time||''});
+            const nid='c_'+fp.id+'_'+ci;
+            notifs.push({id:nid,dot:!readIds.includes(nid),text:c.author+' comentó en '+fp.loc+': "'+c.text.substring(0,40)+'"',time:c.time||'',action:()=>goToFeedPost(fp.id),actionType:'feed',targetId:fp.id});
+          }
+        });
+      }
+      // likes on my spots
+      if(mySpotIds.includes(fp.spotId)&&fp.likes&&fp.likes.length>0){
+        fp.likes.forEach(liker=>{
+          if(liker!==currentUser.username){
+            const nid='l_'+fp.id+'_'+liker;
+            notifs.push({id:nid,dot:!readIds.includes(nid),text:liker+' le dio me gusta a '+fp.loc,time:'',action:()=>goToFeedPost(fp.id),actionType:'feed',targetId:fp.id});
           }
         });
       }
     });
     const lastCleared=LS.load('notifCleared',0);
     SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).slice(0,3).forEach(s=>{
-      notifs.push({dot:false,text:'Nuevo lugar publicado: '+s.name,time:s.createdAt?fmtDate(s.createdAt):''});
+      const nid='s_'+s.id;
+      notifs.push({id:nid,dot:!readIds.includes(nid),text:'Nuevo lugar publicado: '+s.name,time:s.createdAt?fmtDate(s.createdAt):'',action:()=>openSpot(s.id),actionType:'spot',targetId:s.id});
     });
   }
+  // update badge based on unread
+  const hasUnread=notifs.some(n=>n.dot);
+  if(badge)badge.style.display=hasUnread?'block':'none';
+  
   if(!notifs.length){
     el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;">No tenes notificaciones por ahora.</div>';
     return;
@@ -1661,15 +1654,80 @@ function renderNotif(){
   html+='<span style="font-size:12px;color:var(--t2);">'+notifs.length+' notificaciones</span>';
   html+='<button onclick="clearNotifs()" style="font-size:12px;color:var(--danger);background:none;border:none;cursor:pointer;font-weight:500;">Limpiar todo</button></div>';
   notifs.forEach(function(n){
-    html+='<div class="notif-item"><div class="notif-dot '+(n.dot?'':'read')+'"></div>';
-    html+='<div><div style="font-size:13px;color:var(--tx);">'+n.text+'</div>';
-    html+='<div style="font-size:11px;color:var(--t2);margin-top:3px;">'+n.time+'</div></div></div>';
+    const cursor=n.action?'cursor:pointer;':'';
+    const bg=n.dot?'background:rgba(29,158,117,0.05);':'';
+    html+=`<div class="notif-item" style="${cursor}${bg}" onclick="markNotifRead('${n.id}',${n.action?'true':'false'},event)">`;
+    html+='<div class="notif-dot '+(n.dot?'':'read')+'" id="ndot-'+n.id+'"></div>';
+    html+='<div style="flex:1;"><div style="font-size:13px;color:var(--tx);">'+n.text+'</div>';
+    html+='<div style="font-size:11px;color:var(--t2);margin-top:3px;">'+n.time+'</div></div>';
+    if(n.action){html+='<svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2" stroke-linecap="round" width="14" height="14"><polyline points="9,18 15,12 9,6"/></svg>';}
+    html+='</div>';
   });
   el.innerHTML=html;
+  // store notif actions for click handler
+  window._notifActions=notifs.reduce((acc,n)=>{acc[n.id]=n;return acc;},{});
 }
+
+function markNotifRead(nid, hasAction, evt){
+  const readIds=LS.load('notifReadIds',[]);
+  if(!readIds.includes(nid))readIds.push(nid);
+  LS.save('notifReadIds',readIds);
+  // update dot
+  const dot=document.getElementById('ndot-'+nid);
+  if(dot){dot.classList.add('read');}
+  // update parent bg
+  if(dot&&dot.parentElement)dot.parentElement.style.background='';
+  // check if badge should go off
+  updateNotifBadge();
+  // navigate if action
+  if(hasAction&&window._notifActions&&window._notifActions[nid]&&window._notifActions[nid].action){
+    window._notifActions[nid].action();
+  }
+}
+
+function goToFeedPost(fpId){
+  go('feed');
+  setTimeout(()=>{
+    const el=document.getElementById('fc_'+fpId);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },300);
+}
+
+function updateNotifBadge(){
+  const badge=document.getElementById('notif-badge');
+  if(!badge||!currentUser)return;
+  const readIds=LS.load('notifReadIds',[]);
+  let hasNew=false;
+  const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
+  FEED.forEach(fp=>{
+    if(mySpotIds.includes(fp.spotId)&&fp.comments){
+      fp.comments.forEach((c,ci)=>{
+        if(c.author!==currentUser.name){
+          const nid='c_'+fp.id+'_'+ci;
+          if(!readIds.includes(nid))hasNew=true;
+        }
+      });
+    }
+    if(mySpotIds.includes(fp.spotId)&&fp.likes){
+      fp.likes.forEach(liker=>{
+        if(liker!==currentUser.username){
+          const nid='l_'+fp.id+'_'+liker;
+          if(!readIds.includes(nid))hasNew=true;
+        }
+      });
+    }
+  });
+  const lastCleared=LS.load('notifCleared',0);
+  SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).forEach(s=>{
+    const nid='s_'+s.id;
+    if(!readIds.includes(nid))hasNew=true;
+  });
+  badge.style.display=hasNew?'block':'none';
+}
+
 function clearNotifs(){
   LS.save('notifCleared', Date.now());
-  LS.save('notifRead', Date.now());
+  LS.save('notifReadIds', []);
   LS.save('welcomeDismissed', true);
   const badge=document.getElementById('notif-badge');
   if(badge)badge.style.display='none';
