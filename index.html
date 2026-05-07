@@ -595,6 +595,17 @@ html,body{height:100%;height:100dvh;overflow:hidden;font-family:'DM Sans',sans-s
 <!-- ADMIN -->
 <div class="screen" id="s-admin"><div class="topbar"><button class="back-btn" onclick="go('map')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver</button><div class="ttitle" style="color:#BA7517;">Panel Admin ⚙️</div></div><div class="form-wrap" id="admin-content"></div></div>
 
+<!-- PERFIL PÚBLICO DE USUARIO -->
+<div class="screen" id="s-userprofile">
+  <div class="topbar">
+    <button class="back-btn" id="userprofile-back" onclick="history.back();go(_prevScreen||'feed')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>Volver
+    </button>
+    <div class="ttitle" id="userprofile-title">Perfil</div>
+  </div>
+  <div class="detail-scroll" id="userprofile-content"></div>
+</div>
+
 </div><!-- /app -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -791,8 +802,9 @@ function go(s){
   document.getElementById('s-'+s).classList.add('active');
   if(s==='map')setTimeout(()=>{if(map)map.invalidateSize();},120);
   if(s==='feed'){
-    showSpinner();
-    silentSync().then(()=>{renderFeed();hideSpinner();}).catch(()=>{renderFeed();hideSpinner();});
+    // Mostrar datos locales INMEDIATAMENTE, sync en background
+    renderFeed();
+    silentSync().then(()=>renderFeed()).catch(()=>{});
   }
   if(s==='favorites')renderFavorites();
   if(s==='notif')renderNotif();
@@ -902,12 +914,30 @@ function sendPhotoComment(){
   const text=inp.value.trim();if(!text)return;
   const photo=getPDOPhoto();if(!photo)return;
   if(!photo.comments)photo.comments=[];
-  photo.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:fmtDate(Date.now()),createdAt:Date.now()});
+  photo.comments.push({author:currentUser.name,authorUsername:currentUser.username,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:fmtDate(Date.now()),createdAt:Date.now()});
   LS.save('spots',SPOTS);
   inp.value='';refreshPDO(photo);
   showToast('Comentario enviado 💬');
   const spot=PDO_REF?SPOTS.find(s=>s.id===PDO_REF.spotId):null;
   if(spot)pushSpot(spot);
+  // ===== NOTIFICACIONES =====
+  const nid='pc_'+PDO_REF?.photoId+'_'+(photo.comments.length-1);
+  const ntext=currentUser.name+' comentó una foto en "'+spot?.name+'": "'+text.substring(0,40)+'"';
+  const ntime=fmtDate(Date.now());
+  // 1. Notificar al autor de la foto
+  if(photo.author)pushNotifToUser(photo.author,{id:nid,text:ntext,time:ntime,targetSpotId:spot?.id});
+  // 2. Notificar al dueño del lugar (si es distinto)
+  if(spot?.author&&spot.author!==photo.author)pushNotifToUser(spot.author,{id:nid+'_so',text:ntext,time:ntime,targetSpotId:spot.id});
+  // 3. Notificar a todos los que comentaron antes en esa foto
+  const notifiedAlready=new Set([currentUser.username,photo.author,spot?.author]);
+  photo.comments.slice(0,-1).forEach(c=>{
+    const cu=c.authorUsername||registeredUsers.find(u=>u.name===c.author)?.username;
+    if(cu&&!notifiedAlready.has(cu)){
+      notifiedAlready.add(cu);
+      pushNotifToUser(cu,{id:nid+'_'+cu,text:ntext,time:ntime,targetSpotId:spot?.id});
+    }
+  });
+  updateNotifBadge();
 }
 
 function deletePhotoComment(idx){
@@ -993,20 +1023,30 @@ function afterLogin(){
   updateProfileUI();
   document.getElementById('admin-fab').style.display=currentUser.role==='admin'?'flex':'none';
   loadWeather();
-  // sync from server FIRST, then show map
-  syncDB().then(()=>{
-    setTimeout(initMap,150);
+  // Mostrar loading con señuelo animado
+  const loadEl=document.getElementById('loading-screen');
+  if(loadEl)loadEl.style.display='flex';
+  // Mostrar mapa INMEDIATAMENTE con datos locales (no esperar servidor)
+  setTimeout(()=>{
+    initMap();
     go('map');
     renderMarkers(activeFilter);
     renderSheet(activeFilter);
     updateProfileUI();
     updateNotifBadge();
+    if(loadEl)loadEl.style.display='none';
     const last=LS.load('lastScreen','map');
     if(last&&last!=='map'&&last!=='add'&&last!=='login'){
-      setTimeout(()=>go(last),300);
+      setTimeout(()=>go(last),200);
     }
-  });
-  // background sync every 30 seconds - ONLY adds new items, never overwrites
+  },150);
+  // Sincronizar con servidor en background sin bloquear UI
+  syncDB().then(()=>{
+    renderMarkers(activeFilter);
+    renderSheet(activeFilter);
+    updateProfileUI();
+    updateNotifBadge();
+  }).catch(()=>{});
   if(!window._ar){
     window._ar=setInterval(()=>silentSync(),30000);
   }
@@ -1115,7 +1155,7 @@ function openSpot(id){
     const av=c.authorPhoto?`<img src="${c.authorPhoto}"/>`:c.authorInitials||'?';
     return `<div style="display:flex;gap:8px;margin-bottom:8px;">
       <div style="width:26px;height:26px;border-radius:50%;background:var(--vl);color:var(--vd);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">${av}</div>
-      <div style="flex:1;background:var(--bg);border-radius:0 var(--r) var(--r) var(--r);padding:7px 10px;"><strong style="font-size:11px;">${c.author}</strong>${dBtn}<div style="font-size:12px;margin-top:2px;">${c.text}</div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${c.time}</div></div>
+      <div style="flex:1;background:var(--bg);border-radius:0 var(--r) var(--r) var(--r);padding:7px 10px;"><strong style="font-size:11px;cursor:pointer;color:var(--v);" onclick="openUserProfile('${c.authorUsername||registeredUsers.find(u=>u.name===c.author)?.username||c.author}')">${c.author}</strong>${dBtn}<div style="font-size:12px;margin-top:2px;">${c.text}</div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${c.time}</div></div>
     </div>`;}).join(''):'';
 
   document.getElementById('det-content').innerHTML=`
@@ -1128,6 +1168,7 @@ function openSpot(id){
         <span class="badge ${s.pub?'':'priv'}" style="flex-shrink:0;margin-left:8px;">${s.pub?'Público':'Privado'}</span>
       </div>
       <div class="det-loc"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${s.loc}</div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:12px;">Publicado por <span onclick="openUserProfile('${s.author}')" style="color:var(--v);font-weight:600;cursor:pointer;">${registeredUsers.find(u=>u.username===s.author)?.name||s.author}</span></div>
       <div class="sec-label">Valoración de la comunidad</div>
       <div class="stars-row" id="spot-stars-${s.id}">${buildStarsHtml(s)}</div>
       <div class="sec-label">${myRating!==undefined?'Tu calificación (podés cambiarla)':'Calificá este lugar'}</div>
@@ -1427,6 +1468,14 @@ function publishSpot(){
   newPhotoData=coverMedia?coverMedia.data:null;
   const newSpot={id:'s_'+Date.now(),name,loc:name,lat:newSpotLat,lng:newSpotLng,pub:access==='Público',stars:addStarVal||4,votes:1,ratings:{},species,baits,type,season:'Todo el año',depth:'Variable',emoji:'🎣',comment:comment||'Lugar agregado por la comunidad.',filter:filterKeys,spotPhotos:photoEntry,author:currentUser?currentUser.username:'user',createdAt:Date.now()};
   SPOTS.push(newSpot);LS.save('spots',SPOTS);pushSpot(newSpot);
+  // Notificar a todos los usuarios del nuevo lugar
+  const newSpotNid='s_'+newSpot.id;
+  const newSpotNtext='📍 '+currentUser.name+' publicó un nuevo lugar: '+name;
+  const newSpotNtime=fmtDate(Date.now());
+  registeredUsers.forEach(u=>{
+    if(u.username!==currentUser.username)
+      pushNotifToUser(u.username,{id:newSpotNid,text:newSpotNtext,time:newSpotNtime,targetSpotId:newSpot.id});
+  });
   // store photo separately to avoid Supabase size limit
   const fpPhotos=newPhotoData?[newPhotoData]:[];
   const fp={id:'f_'+Date.now(),spotId:newSpot.id,authorUsername:currentUser?currentUser.username:'',author:currentUser?currentUser.name:'Usuario',authorInitials:currentUser?currentUser.initials:'?',authorPhoto:currentUser?currentUser.photo:null,time:fmtDate(Date.now()),createdAt:Date.now(),loc:name,bg:'linear-gradient(135deg,#9FE1CB,#085041)',photos:[],emoji:'🎣',caption:comment||'Nuevo lugar de pesca.',species,baits,tipo:[type],likes:[],comments:[],createdAt:Date.now()};
@@ -1499,7 +1548,7 @@ function buildFeedCard(p){
   return `<div class="feed-card" id="fc_${p.id}">
     <div class="feed-header">
       <div class="feed-av">${avHtml}</div>
-      <div style="flex:1;"><div class="feed-name">${p.author}</div><div class="feed-time">${p.time}</div>
+      <div style="flex:1;"><div class="feed-name" onclick="openUserProfile('${p.authorUsername||p.author}')" style="cursor:pointer;">${p.author}</div><div class="feed-time">${p.time}</div>
         <div class="feed-loc" onclick="${p.spotId?`openSpot('${p.spotId}')`:''}">${p.loc?'📍 '+p.loc:''}</div>
       </div>
     </div>
@@ -1548,7 +1597,7 @@ function sendFeedComment(id){
   const inp=document.getElementById('fc-inp-'+id);if(!inp)return;
   const text=inp.value.trim();if(!text)return;
   const p=FEED.find(x=>x.id===id);if(!p)return;
-  p.comments.push({author:currentUser.name,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:fmtDate(Date.now()),createdAt:Date.now()});
+  p.comments.push({author:currentUser.name,authorUsername:currentUser.username,authorInitials:currentUser.initials,authorPhoto:currentUser.photo||null,text,time:fmtDate(Date.now()),createdAt:Date.now()});
   LS.save('feed',FEED);inp.value='';
   const listEl=document.getElementById('fc-comm-'+id);
   if(listEl){
@@ -1557,6 +1606,25 @@ function sendFeedComment(id){
     div.innerHTML='<div class="feed-comment-av">'+av+'</div><div><div class="feed-comment-text"><strong>'+currentUser.name+'</strong> '+text+'</div><div class="feed-comment-time">Ahora mismo</div></div>';
     listEl.appendChild(div);
   }
+  // ===== NOTIFICACIONES =====
+  const nid='c_'+id+'_'+(p.comments.length-1);
+  const ntext=currentUser.name+' comentó en "'+p.loc+'": "'+text.substring(0,40)+'"';
+  const ntime=fmtDate(Date.now());
+  // 1. Notificar al dueño del lugar
+  const spot=SPOTS.find(s=>s.id===p.spotId);
+  if(spot&&spot.author)pushNotifToUser(spot.author,{id:nid,text:ntext,time:ntime,targetFeedId:id});
+  // 2. Notificar al autor del post (si es distinto al dueño)
+  if(p.authorUsername&&p.authorUsername!==spot?.author)pushNotifToUser(p.authorUsername,{id:nid+'_au',text:ntext,time:ntime,targetFeedId:id});
+  // 3. Notificar a todos los que comentaron antes (sin duplicar)
+  const notifiedAlready=new Set([currentUser.username,spot?.author,p.authorUsername]);
+  p.comments.slice(0,-1).forEach(c=>{
+    const cu=c.authorUsername||registeredUsers.find(u=>u.name===c.author)?.username;
+    if(cu&&!notifiedAlready.has(cu)){
+      notifiedAlready.add(cu);
+      pushNotifToUser(cu,{id:nid+'_'+cu,text:ntext,time:ntime,targetFeedId:id});
+    }
+  });
+  updateNotifBadge();
   pushFeed(p);
 }
 
@@ -1608,46 +1676,51 @@ function renderFavorites(){
 // ===== NOTIF =====
 function renderNotif(){
   const el=document.getElementById('notif-list');if(!el)return;
-  // DON'T mark all as read - only update lastVisit for badge calc
   LS.save('notifLastVisit',Date.now());
   const badge=document.getElementById('notif-badge');
-  
   const readIds=LS.load('notifReadIds',[]);
+  // Notificaciones push guardadas para este usuario
+  const pushNotifs=getUserNotifs();
   const notifs=[];
-  if(!LS.load('welcomeDismissed',false))notifs.push({id:'welcome',dot:false,text:'Bienvenido a PescaUY! Subi tu primer lugar.',time:'al registrarte',action:null});
+  if(!LS.load('welcomeDismissed',false))notifs.push({id:'welcome',dot:false,text:'¡Bienvenido a PescaUY! Subí tu primer lugar.',time:'al registrarte',action:null});
   if(currentUser){
+    // Push notifs (comentarios en posts donde participé, nuevos lugares, etc)
+    pushNotifs.forEach(n=>{
+      notifs.push({id:n.id,dot:!n.read,text:n.text,time:n.time||'',action:n.targetFeedId?()=>goToFeedPost(n.targetFeedId):n.targetSpotId?()=>openSpot(n.targetSpotId):null});
+    });
+    // Comentarios en mis lugares (legacy)
     const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
     FEED.forEach(fp=>{
       if(mySpotIds.includes(fp.spotId)&&fp.comments){
         fp.comments.forEach((c,ci)=>{
           if(c.author!==currentUser.name){
             const nid='c_'+fp.id+'_'+ci;
-            notifs.push({id:nid,dot:!readIds.includes(nid),text:c.author+' comentó en '+fp.loc+': "'+c.text.substring(0,40)+'"',time:c.time||'',action:()=>goToFeedPost(fp.id),actionType:'feed',targetId:fp.id});
+            if(!notifs.find(n=>n.id===nid))
+              notifs.push({id:nid,dot:!readIds.includes(nid),text:c.author+' comentó en '+fp.loc+': "'+c.text.substring(0,40)+'"',time:c.time||'',action:()=>goToFeedPost(fp.id)});
           }
         });
       }
-      // likes on my spots
-      if(mySpotIds.includes(fp.spotId)&&fp.likes&&fp.likes.length>0){
+      if(mySpotIds.includes(fp.spotId)&&fp.likes){
         fp.likes.forEach(liker=>{
           if(liker!==currentUser.username){
             const nid='l_'+fp.id+'_'+liker;
-            notifs.push({id:nid,dot:!readIds.includes(nid),text:liker+' le dio me gusta a '+fp.loc,time:'',action:()=>goToFeedPost(fp.id),actionType:'feed',targetId:fp.id});
+            if(!notifs.find(n=>n.id===nid))
+              notifs.push({id:nid,dot:!readIds.includes(nid),text:liker+' le dio me gusta a '+fp.loc,time:'',action:()=>goToFeedPost(fp.id)});
           }
         });
       }
     });
     const lastCleared=LS.load('notifCleared',0);
-    SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).slice(0,3).forEach(s=>{
+    SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).slice(0,5).forEach(s=>{
       const nid='s_'+s.id;
-      notifs.push({id:nid,dot:!readIds.includes(nid),text:'Nuevo lugar publicado: '+s.name,time:s.createdAt?fmtDate(s.createdAt):'',action:()=>openSpot(s.id),actionType:'spot',targetId:s.id});
+      if(!notifs.find(n=>n.id===nid))
+        notifs.push({id:nid,dot:!readIds.includes(nid),text:'📍 Nuevo lugar publicado: '+s.name,time:s.createdAt?fmtDate(s.createdAt):'',action:()=>openSpot(s.id)});
     });
   }
-  // update badge based on unread
   const hasUnread=notifs.some(n=>n.dot);
   if(badge)badge.style.display=hasUnread?'block':'none';
-  
   if(!notifs.length){
-    el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;">No tenes notificaciones por ahora.</div>';
+    el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;">No tenés notificaciones por ahora.</div>';
     return;
   }
   let html='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--br);">';
@@ -1664,7 +1737,6 @@ function renderNotif(){
     html+='</div>';
   });
   el.innerHTML=html;
-  // store notif actions for click handler
   window._notifActions=notifs.reduce((acc,n)=>{acc[n.id]=n;return acc;},{});
 }
 
@@ -1672,14 +1744,17 @@ function markNotifRead(nid, hasAction, evt){
   const readIds=LS.load('notifReadIds',[]);
   if(!readIds.includes(nid))readIds.push(nid);
   LS.save('notifReadIds',readIds);
-  // update dot
+  // marcar push notif como leída también
+  if(currentUser){
+    const key='usernotifs_'+currentUser.username;
+    const pn=LS.load(key,[]);
+    const idx=pn.findIndex(n=>n.id===nid||nid.startsWith(n.id));
+    if(idx>=0){pn[idx].read=true;LS.save(key,pn);}
+  }
   const dot=document.getElementById('ndot-'+nid);
   if(dot){dot.classList.add('read');}
-  // update parent bg
   if(dot&&dot.parentElement)dot.parentElement.style.background='';
-  // check if badge should go off
   updateNotifBadge();
-  // navigate if action
   if(hasAction&&window._notifActions&&window._notifActions[nid]&&window._notifActions[nid].action){
     window._notifActions[nid].action();
   }
@@ -1698,30 +1773,28 @@ function updateNotifBadge(){
   if(!badge||!currentUser)return;
   const readIds=LS.load('notifReadIds',[]);
   let hasNew=false;
-  const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
-  FEED.forEach(fp=>{
-    if(mySpotIds.includes(fp.spotId)&&fp.comments){
-      fp.comments.forEach((c,ci)=>{
-        if(c.author!==currentUser.name){
-          const nid='c_'+fp.id+'_'+ci;
-          if(!readIds.includes(nid))hasNew=true;
-        }
-      });
-    }
-    if(mySpotIds.includes(fp.spotId)&&fp.likes){
-      fp.likes.forEach(liker=>{
-        if(liker!==currentUser.username){
-          const nid='l_'+fp.id+'_'+liker;
-          if(!readIds.includes(nid))hasNew=true;
-        }
-      });
-    }
-  });
-  const lastCleared=LS.load('notifCleared',0);
-  SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).forEach(s=>{
-    const nid='s_'+s.id;
-    if(!readIds.includes(nid))hasNew=true;
-  });
+  // Push notifs no leídas
+  const pushNotifs=getUserNotifs();
+  if(pushNotifs.some(n=>!n.read))hasNew=true;
+  if(!hasNew){
+    const mySpotIds=SPOTS.filter(s=>s.author===currentUser.username).map(s=>s.id);
+    FEED.forEach(fp=>{
+      if(mySpotIds.includes(fp.spotId)&&fp.comments){
+        fp.comments.forEach((c,ci)=>{
+          if(c.author!==currentUser.name){const nid='c_'+fp.id+'_'+ci;if(!readIds.includes(nid))hasNew=true;}
+        });
+      }
+      if(mySpotIds.includes(fp.spotId)&&fp.likes){
+        fp.likes.forEach(liker=>{
+          if(liker!==currentUser.username){const nid='l_'+fp.id+'_'+liker;if(!readIds.includes(nid))hasNew=true;}
+        });
+      }
+    });
+    const lastCleared=LS.load('notifCleared',0);
+    SPOTS.filter(s=>s.author!==currentUser.username&&(s.createdAt||0)>lastCleared).forEach(s=>{
+      const nid='s_'+s.id;if(!readIds.includes(nid))hasNew=true;
+    });
+  }
   badge.style.display=hasNew?'block':'none';
 }
 
@@ -1734,6 +1807,72 @@ function clearNotifs(){
   const el=document.getElementById('notif-list');
   if(el)el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--t2);font-size:13px;">No tenes notificaciones por ahora.</div>';
   showToast('Notificaciones limpiadas');
+}
+
+// ===== SISTEMA DE NOTIFICACIONES PUSH LOCAL =====
+// Guarda notificaciones por usuario en localStorage
+function pushNotifToUser(targetUsername, notif){
+  if(!targetUsername||targetUsername===currentUser?.username)return;
+  const key='usernotifs_'+targetUsername;
+  const notifs=LS.load(key,[]);
+  // evitar duplicados
+  if(notifs.find(n=>n.id===notif.id))return;
+  notifs.unshift({...notif, ts:Date.now(), read:false});
+  // max 50 notificaciones por usuario
+  if(notifs.length>50)notifs.length=50;
+  LS.save(key,notifs);
+}
+
+function getUserNotifs(){
+  if(!currentUser)return[];
+  return LS.load('usernotifs_'+currentUser.username,[]);
+}
+
+// ===== PERFIL PÚBLICO =====
+let _prevScreen='feed';
+function openUserProfile(username){
+  if(currentUser&&username===currentUser.username){go('profile');return;}
+  _prevScreen=document.querySelector('.screen.active')?.id?.replace('s-','')||'feed';
+  const u=registeredUsers.find(x=>x.username===username);
+  const userSpots=SPOTS.filter(s=>s.author===username);
+  const totalPhotos=SPOTS.reduce((acc,s)=>acc+(s.spotPhotos||[]).filter(p=>p.author===username).length,0);
+  const totalLikes=FEED.filter(f=>f.authorUsername===username).reduce((acc,f)=>acc+(f.likes||[]).length,0);
+  // reputación: promedio de estrellas de sus lugares
+  const allRatings=userSpots.flatMap(s=>Object.values(s.ratings||{}));
+  const rep=allRatings.length?Math.round((allRatings.reduce((a,b)=>a+b,0)/allRatings.length)*10)/10:0;
+  const avHtml=u?.photo?`<img src="${u.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`:`<span style="font-size:22px;font-weight:700;color:var(--vd);">${u?.initials||username.substring(0,2).toUpperCase()}</span>`;
+  const spotsHtml=userSpots.length?userSpots.map(s=>{
+    const th=s.spotPhotos&&s.spotPhotos[0]?`<img src="${s.spotPhotos[0].data}" style="width:100%;height:100%;object-fit:cover;">`:`${s.emoji}`;
+    return `<div class="spot-row" onclick="openSpot('${s.id}')">
+      <div class="spot-icon-wrap">${th}</div>
+      <div class="spot-info"><div class="spot-name">${s.name}</div>
+        <div class="spot-meta"><span class="stars-inline">${'★'.repeat(Math.round(s.stars))}</span> ${s.stars.toFixed(1)} · ${s.loc}</div>
+        <div class="tags-row">${s.species.slice(0,3).map(x=>`<span class="tag fish">${x}</span>`).join('')}</div>
+      </div>
+      <span class="badge ${s.pub?'':'priv'}">${s.pub?'Público':'Privado'}</span>
+    </div>`;}).join('')
+    :`<div style="padding:20px;text-align:center;color:var(--t2);font-size:13px;">No publicó lugares todavía.</div>`;
+  document.getElementById('userprofile-title').textContent=u?.name||username;
+  document.getElementById('userprofile-content').innerHTML=`
+    <div class="det-body">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div style="width:64px;height:64px;border-radius:50%;background:var(--vl);display:flex;align-items:center;justify-content:center;border:2px solid var(--v);overflow:hidden;flex-shrink:0;">${avHtml}</div>
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--tx);">${u?.name||username}</div>
+          <div style="font-size:12px;color:var(--t2);">@${username} · ${u?.role==='admin'?'Administrador':'Pescador'}</div>
+        </div>
+      </div>
+      <div class="stats-row" style="margin-bottom:16px;">
+        <div class="stat-cell"><div class="stat-num">${userSpots.length}</div><div class="stat-lbl">Lugares</div></div>
+        <div class="stat-cell"><div class="stat-num">${totalPhotos}</div><div class="stat-lbl">Fotos</div></div>
+        <div class="stat-cell"><div class="stat-num">${totalLikes}</div><div class="stat-lbl">Me gusta</div></div>
+        <div class="stat-cell"><div class="stat-num">${rep>0?'⭐'+rep:'—'}</div><div class="stat-lbl">Rep.</div></div>
+      </div>
+      <div class="sec-label">Lugares publicados (${userSpots.length})</div>
+      ${spotsHtml}
+      <div style="height:20px;"></div>
+    </div>`;
+  go('userprofile');
 }
 
 // ===== ADMIN =====
